@@ -1,6 +1,6 @@
 /*
 Feathers
-Copyright (c) 2012 Josh Tynjala. All Rights Reserved.
+Copyright 2012-2013 Joshua Tynjala. All Rights Reserved.
 
 This program is free software. You can redistribute and/or modify it in
 accordance with the terms of the accompanying license agreement.
@@ -180,12 +180,12 @@ package feathers.controls.supportClasses
 
 		public function get horizontalScrollStep():Number
 		{
-			return this._typicalItemWidth;
+			return Math.min(this._typicalItemWidth, this._typicalItemHeight);
 		}
 
 		public function get verticalScrollStep():Number
 		{
-			return this._typicalItemHeight;
+			return Math.min(this._typicalItemWidth, this._typicalItemHeight);
 		}
 
 		private var _typicalItemWidth:Number = NaN;
@@ -307,12 +307,20 @@ package feathers.controls.supportClasses
 			if(this._dataProvider)
 			{
 				this._dataProvider.removeEventListener(Event.CHANGE, dataProvider_changeHandler);
+				this._dataProvider.removeEventListener(CollectionEventType.RESET, dataProvider_resetHandler);
+				this._dataProvider.removeEventListener(CollectionEventType.ADD_ITEM, dataProvider_addItemHandler);
+				this._dataProvider.removeEventListener(CollectionEventType.REMOVE_ITEM, dataProvider_removeItemHandler);
+				this._dataProvider.removeEventListener(CollectionEventType.REPLACE_ITEM, dataProvider_replaceItemHandler);
 				this._dataProvider.removeEventListener(CollectionEventType.UPDATE_ITEM, dataProvider_updateItemHandler);
 			}
 			this._dataProvider = value;
 			if(this._dataProvider)
 			{
 				this._dataProvider.addEventListener(Event.CHANGE, dataProvider_changeHandler);
+				this._dataProvider.addEventListener(CollectionEventType.RESET, dataProvider_resetHandler);
+				this._dataProvider.addEventListener(CollectionEventType.ADD_ITEM, dataProvider_addItemHandler);
+				this._dataProvider.addEventListener(CollectionEventType.REMOVE_ITEM, dataProvider_removeItemHandler);
+				this._dataProvider.addEventListener(CollectionEventType.REPLACE_ITEM, dataProvider_replaceItemHandler);
 				this._dataProvider.addEventListener(CollectionEventType.UPDATE_ITEM, dataProvider_updateItemHandler);
 			}
 			this.invalidate(INVALIDATION_FLAG_DATA);
@@ -911,10 +919,6 @@ package feathers.controls.supportClasses
 
 			if(stylesInvalid || dataInvalid || itemRendererInvalid)
 			{
-				if(this._layout is IVariableVirtualLayout)
-				{
-					IVariableVirtualLayout(this._layout).resetVariableVirtualCache();
-				}
 				this.calculateTypicalValues();
 			}
 
@@ -1911,18 +1915,17 @@ package feathers.controls.supportClasses
 			{
 				renderer = this._inactiveHeaderRenderers.shift();
 			}
-			const displayRenderer:DisplayObject = DisplayObject(renderer);
 			renderer.data = header;
 			renderer.groupIndex = groupIndex;
 			renderer.layoutIndex = layoutIndex;
 			renderer.owner = this._owner;
-			displayRenderer.visible = true;
+			renderer.visible = true;
 
 			if(!isTemporary)
 			{
 				this._headerRendererMap[header] = renderer;
 				this._activeHeaderRenderers.push(renderer);
-				displayRenderer.addEventListener(FeathersEventType.RESIZE, headerOrFooterRenderer_resizeHandler);
+				renderer.addEventListener(FeathersEventType.RESIZE, headerOrFooterRenderer_resizeHandler);
 				this._owner.dispatchEventWith(FeathersEventType.RENDERER_ADD, false, renderer);
 			}
 
@@ -1953,18 +1956,17 @@ package feathers.controls.supportClasses
 			{
 				renderer = this._inactiveFooterRenderers.shift();
 			}
-			const displayRenderer:DisplayObject = DisplayObject(renderer);
 			renderer.data = footer;
 			renderer.groupIndex = groupIndex;
 			renderer.layoutIndex = layoutIndex;
 			renderer.owner = this._owner;
-			displayRenderer.visible = true;
+			renderer.visible = true;
 
 			if(!isTemporary)
 			{
 				this._footerRendererMap[footer] = renderer;
 				this._activeFooterRenderers.push(renderer);
-				displayRenderer.addEventListener(FeathersEventType.RESIZE, headerOrFooterRenderer_resizeHandler);
+				renderer.addEventListener(FeathersEventType.RESIZE, headerOrFooterRenderer_resizeHandler);
 				this._owner.dispatchEventWith(FeathersEventType.RENDERER_ADD, false, renderer);
 			}
 
@@ -1973,24 +1975,27 @@ package feathers.controls.supportClasses
 
 		private function destroyItemRenderer(renderer:IGroupedListItemRenderer):void
 		{
-			const displayRenderer:DisplayObject = DisplayObject(renderer);
-			displayRenderer.removeEventListener(Event.CHANGE, renderer_changeHandler);
-			displayRenderer.removeEventListener(FeathersEventType.RESIZE, itemRenderer_resizeHandler);
-			this.removeChild(displayRenderer, true);
+			renderer.removeEventListener(Event.CHANGE, renderer_changeHandler);
+			renderer.removeEventListener(FeathersEventType.RESIZE, itemRenderer_resizeHandler);
+			renderer.owner = null;
+			renderer.data = null;
+			this.removeChild(DisplayObject(renderer), true);
 		}
 
 		private function destroyHeaderRenderer(renderer:IGroupedListHeaderOrFooterRenderer):void
 		{
-			const displayRenderer:DisplayObject = DisplayObject(renderer);
-			displayRenderer.removeEventListener(FeathersEventType.RESIZE, headerOrFooterRenderer_resizeHandler);
-			this.removeChild(displayRenderer, true);
+			renderer.removeEventListener(FeathersEventType.RESIZE, headerOrFooterRenderer_resizeHandler);
+			renderer.owner = null;
+			renderer.data = null;
+			this.removeChild(DisplayObject(renderer), true);
 		}
 
 		private function destroyFooterRenderer(renderer:IGroupedListHeaderOrFooterRenderer):void
 		{
-			const displayRenderer:DisplayObject = DisplayObject(renderer);
-			displayRenderer.removeEventListener(FeathersEventType.RESIZE, headerOrFooterRenderer_resizeHandler);
-			this.removeChild(displayRenderer, true);
+			renderer.removeEventListener(FeathersEventType.RESIZE, headerOrFooterRenderer_resizeHandler);
+			renderer.owner = null;
+			renderer.data = null;
+			this.removeChild(DisplayObject(renderer), true);
 		}
 
 		private function locationToDisplayIndex(groupIndex:int, itemIndex:int):int
@@ -2039,10 +2044,59 @@ package feathers.controls.supportClasses
 			this.invalidateParent();
 		}
 
+		private function dataProvider_addItemHandler(event:Event, indices:Array):void
+		{
+			const layout:IVariableVirtualLayout = this._layout as IVariableVirtualLayout;
+			if(!layout || !layout.hasVariableItemDimensions)
+			{
+				return;
+			}
+			const groupIndex:int = indices[0] as int;
+			const itemIndex:int = indices[1] as int;
+			const displayIndex:int = this.locationToDisplayIndex(groupIndex, itemIndex);
+			layout.addToVariableVirtualCacheAtIndex(displayIndex);
+		}
+
+		private function dataProvider_removeItemHandler(event:Event, indices:Array):void
+		{
+			const layout:IVariableVirtualLayout = this._layout as IVariableVirtualLayout;
+			if(!layout || !layout.hasVariableItemDimensions)
+			{
+				return;
+			}
+			const groupIndex:int = indices[0] as int;
+			const itemIndex:int = indices[1] as int;
+			const displayIndex:int = this.locationToDisplayIndex(groupIndex, itemIndex);
+			layout.removeFromVariableVirtualCacheAtIndex(displayIndex);
+		}
+
+		private function dataProvider_replaceItemHandler(event:Event, indices:Array):void
+		{
+			const layout:IVariableVirtualLayout = this._layout as IVariableVirtualLayout;
+			if(!layout || !layout.hasVariableItemDimensions)
+			{
+				return;
+			}
+			const groupIndex:int = indices[0] as int;
+			const itemIndex:int = indices[1] as int;
+			const displayIndex:int = this.locationToDisplayIndex(groupIndex, itemIndex);
+			layout.resetVariableVirtualCacheAtIndex(displayIndex);
+		}
+
+		private function dataProvider_resetHandler(event:Event):void
+		{
+			const layout:IVariableVirtualLayout = this._layout as IVariableVirtualLayout;
+			if(!layout || !layout.hasVariableItemDimensions)
+			{
+				return;
+			}
+			layout.resetVariableVirtualCache();
+		}
+
 		private function dataProvider_updateItemHandler(event:Event, indices:Array):void
 		{
-			const groupIndex:int = indices[0];
-			const itemIndex:int = indices[1];
+			const groupIndex:int = indices[0] as int;
+			const itemIndex:int = indices[1] as int;
 			const item:Object = this._dataProvider.getItemAt(groupIndex, itemIndex);
 			var renderer:IGroupedListItemRenderer = IGroupedListItemRenderer(this._itemRendererMap[item]);
 			if(!renderer)

@@ -1,6 +1,6 @@
 /*
 Feathers
-Copyright (c) 2012 Josh Tynjala. All Rights Reserved.
+Copyright 2012-2013 Joshua Tynjala. All Rights Reserved.
 
 This program is free software. You can redistribute and/or modify it in
 accordance with the terms of the accompanying license agreement.
@@ -536,6 +536,16 @@ package feathers.controls
 		/**
 		 * @private
 		 */
+		protected var _originalBackgroundWidth:Number = NaN;
+
+		/**
+		 * @private
+		 */
+		protected var _originalBackgroundHeight:Number = NaN;
+
+		/**
+		 * @private
+		 */
 		protected var currentBackgroundSkin:DisplayObject;
 
 		/**
@@ -612,6 +622,28 @@ package feathers.controls
 				this.addChildAt(this._backgroundDisabledSkin, 0);
 			}
 			this.invalidate(INVALIDATION_FLAG_STYLES);
+		}
+
+		/**
+		 * Quickly sets all padding properties to the same value. The
+		 * <code>padding</code> getter always returns the value of
+		 * <code>paddingTop</code>, but the other padding values may be
+		 * different.
+		 */
+		public function get padding():Number
+		{
+			return this._paddingTop;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set padding(value:Number):void
+		{
+			this.paddingTop = value;
+			this.paddingRight = value;
+			this.paddingBottom = value;
+			this.paddingLeft = value;
 		}
 
 		/**
@@ -1042,10 +1074,18 @@ package feathers.controls
 			if(needsWidth)
 			{
 				newWidth = this.scroller.width + this._paddingLeft + this._paddingRight;
+				if(!isNaN(this._originalBackgroundWidth))
+				{
+					newWidth = Math.max(newWidth, this._originalBackgroundWidth);
+				}
 			}
 			if(needsHeight)
 			{
 				newHeight = this.scroller.height + this._paddingTop + this._paddingBottom;
+				if(!isNaN(this._originalBackgroundHeight))
+				{
+					newHeight = Math.max(newHeight, this._originalBackgroundHeight);
+				}
 			}
 
 			return this.setSizeInternal(newWidth, newHeight, false);
@@ -1087,6 +1127,15 @@ package feathers.controls
 			if(this.currentBackgroundSkin)
 			{
 				this.currentBackgroundSkin.visible = true;
+
+				if(isNaN(this._originalBackgroundWidth))
+				{
+					this._originalBackgroundWidth = this.currentBackgroundSkin.width;
+				}
+				if(isNaN(this._originalBackgroundHeight))
+				{
+					this._originalBackgroundHeight = this.currentBackgroundSkin.height;
+				}
 			}
 		}
 

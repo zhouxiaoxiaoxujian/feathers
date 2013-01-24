@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012 Josh Tynjala
+Copyright 2012-2013 Joshua Tynjala
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -292,6 +292,28 @@ package feathers.controls
 			}
 			this._rightItems = value;
 			this.invalidate(INVALIDATION_FLAG_RIGHT_CONTENT);
+		}
+
+		/**
+		 * Quickly sets all padding properties to the same value. The
+		 * <code>padding</code> getter always returns the value of
+		 * <code>paddingTop</code>, but the other padding values may be
+		 * different.
+		 */
+		public function get padding():Number
+		{
+			return this._paddingTop;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set padding(value:Number):void
+		{
+			this.paddingTop = value;
+			this.paddingRight = value;
+			this.paddingBottom = value;
+			this.paddingLeft = value;
 		}
 
 		/**
