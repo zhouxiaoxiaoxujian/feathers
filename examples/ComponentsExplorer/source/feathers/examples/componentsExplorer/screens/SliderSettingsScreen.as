@@ -2,6 +2,7 @@ package feathers.examples.componentsExplorer.screens
 {
 	import feathers.controls.Button;
 	import feathers.controls.List;
+	import feathers.controls.NumericStepper;
 	import feathers.controls.PanelScreen;
 	import feathers.controls.PickerList;
 	import feathers.controls.Slider;
@@ -30,8 +31,8 @@ package feathers.examples.componentsExplorer.screens
 		private var _backButton:Button;
 		private var _directionPicker:PickerList;
 		private var _liveDraggingToggle:ToggleSwitch;
-		private var _stepSlider:Slider;
-		private var _pageSlider:Slider;
+		private var _stepStepper:NumericStepper;
+		private var _pageStepper:NumericStepper;
 
 		protected function initializeHandler(event:Event):void
 		{
@@ -52,19 +53,19 @@ package feathers.examples.componentsExplorer.screens
 			this._liveDraggingToggle.isSelected = this.settings.liveDragging;
 			this._liveDraggingToggle.addEventListener(Event.CHANGE, liveDraggingToggle_changeHandler);
 
-			this._stepSlider = new Slider();
-			this._stepSlider.minimum = 1;
-			this._stepSlider.maximum = 20;
-			this._stepSlider.step = 1;
-			this._stepSlider.value = this.settings.step;
-			this._stepSlider.addEventListener(Event.CHANGE, stepSlider_changeHandler);
+			this._stepStepper = new NumericStepper();
+			this._stepStepper.minimum = 1;
+			this._stepStepper.maximum = 20;
+			this._stepStepper.step = 1;
+			this._stepStepper.value = this.settings.step;
+			this._stepStepper.addEventListener(Event.CHANGE, stepStepper_changeHandler);
 
-			this._pageSlider = new Slider();
-			this._pageSlider.minimum = 1;
-			this._pageSlider.maximum = 20;
-			this._pageSlider.step = 1;
-			this._pageSlider.value = this.settings.page;
-			this._pageSlider.addEventListener(Event.CHANGE, pageSlider_changeHandler);
+			this._pageStepper = new NumericStepper();
+			this._pageStepper.minimum = 1;
+			this._pageStepper.maximum = 20;
+			this._pageStepper.step = 1;
+			this._pageStepper.value = this.settings.page;
+			this._pageStepper.addEventListener(Event.CHANGE, pageStepper_changeHandler);
 
 			this._list = new List();
 			this._list.isSelectable = false;
@@ -72,13 +73,14 @@ package feathers.examples.componentsExplorer.screens
 			[
 				{ label: "direction", accessory: this._directionPicker },
 				{ label: "liveDragging", accessory: this._liveDraggingToggle },
-				{ label: "step", accessory: this._stepSlider },
-				{ label: "page", accessory: this._pageSlider },
+				{ label: "step", accessory: this._stepStepper },
+				{ label: "page", accessory: this._pageStepper },
 			]);
 			this._list.layoutData = new AnchorLayoutData(0, 0, 0, 0);
 			this.addChild(this._list);
 
 			this._backButton = new Button();
+			this._backButton.nameList.add(Button.ALTERNATE_NAME_BACK_BUTTON);
 			this._backButton.label = "Back";
 			this._backButton.addEventListener(Event.TRIGGERED, backButton_triggeredHandler);
 
@@ -106,14 +108,14 @@ package feathers.examples.componentsExplorer.screens
 			this.settings.liveDragging = this._liveDraggingToggle.isSelected;
 		}
 
-		private function stepSlider_changeHandler(event:Event):void
+		private function stepStepper_changeHandler(event:Event):void
 		{
-			this.settings.step = this._stepSlider.value;
+			this.settings.step = this._stepStepper.value;
 		}
 
-		private function pageSlider_changeHandler(event:Event):void
+		private function pageStepper_changeHandler(event:Event):void
 		{
-			this.settings.page = this._pageSlider.value;
+			this.settings.page = this._pageStepper.value;
 		}
 
 		private function backButton_triggeredHandler(event:Event):void

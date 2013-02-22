@@ -1673,9 +1673,13 @@ package feathers.controls
 		{
 			this.pendingHorizontalScrollPosition = NaN;
 			this.pendingVerticalScrollPosition = NaN;
-			if(this.pendingHorizontalPageIndex == horizontalPageIndex &&
-				this.pendingVerticalPageIndex == verticalPageIndex &&
-				this.pendingScrollDuration == animationDuration)
+			const horizontalPageHasChanged:Boolean = (this.pendingHorizontalPageIndex >= 0 && this.pendingHorizontalPageIndex != horizontalPageIndex) ||
+				(this.pendingHorizontalPageIndex < 0 && this._horizontalPageIndex != horizontalPageIndex);
+			const verticalPageHasChanged:Boolean = (this.pendingVerticalPageIndex >= 0 && this.pendingVerticalPageIndex != verticalPageIndex) ||
+				(this.pendingVerticalPageIndex < 0 && this._verticalPageIndex != verticalPageIndex);
+			const durationHasChanged:Boolean = (this.pendingHorizontalPageIndex >= 0 || this.pendingVerticalPageIndex >= 0) && this.pendingScrollDuration == animationDuration
+			if(!horizontalPageHasChanged && !verticalPageHasChanged &&
+				!durationHasChanged)
 			{
 				return;
 			}
@@ -2320,7 +2324,7 @@ package feathers.controls
 			if(this.horizontalScrollBar)
 			{
 				this.horizontalScrollBar.x = this._leftViewPortOffset;
-				this.horizontalScrollBar.y = this._viewPortWrapper.y + this._viewPort.visibleHeight;
+				this.horizontalScrollBar.y = this._topViewPortOffset + this._viewPort.visibleHeight;
 				if(this._scrollBarDisplayMode != SCROLL_BAR_DISPLAY_MODE_FIXED)
 				{
 					this.horizontalScrollBar.y -= this.horizontalScrollBar.height;
@@ -2334,7 +2338,7 @@ package feathers.controls
 
 			if(this.verticalScrollBar)
 			{
-				this.verticalScrollBar.x = this._viewPortWrapper.x + this._viewPort.visibleWidth;
+				this.verticalScrollBar.x = this._leftViewPortOffset + this._viewPort.visibleWidth;
 				if(this._scrollBarDisplayMode != SCROLL_BAR_DISPLAY_MODE_FIXED)
 				{
 					this.verticalScrollBar.x -= this.verticalScrollBar.width;
@@ -2611,7 +2615,7 @@ package feathers.controls
 				return;
 			}
 
-			var absPixelsPerMS:Number = Math.abs(pixelsPerMS);
+			const absPixelsPerMS:Number = Math.abs(pixelsPerMS);
 			if(absPixelsPerMS <= MINIMUM_VELOCITY)
 			{
 				this.finishScrollingHorizontally();
@@ -2678,13 +2682,12 @@ package feathers.controls
 				return;
 			}
 
-			var absPixelsPerMS:Number = Math.abs(pixelsPerMS);
+			const absPixelsPerMS:Number = Math.abs(pixelsPerMS);
 			if(absPixelsPerMS <= MINIMUM_VELOCITY)
 			{
 				this.finishScrollingVertically();
 				return;
 			}
-
 			var targetVerticalScrollPosition:Number = this._verticalScrollPosition + (pixelsPerMS - MINIMUM_VELOCITY) / Math.log(FRICTION);
 			if(targetVerticalScrollPosition < 0 || targetVerticalScrollPosition > this._maxVerticalScrollPosition)
 			{
