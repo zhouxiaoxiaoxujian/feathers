@@ -23,7 +23,6 @@ package feathers.controls.renderers
 	import starling.display.DisplayObject;
 	import starling.events.Event;
 	import starling.events.TouchEvent;
-	import starling.textures.Texture;
 
 	/**
 	 * An abstract class for item renderer implementations.
@@ -123,6 +122,7 @@ package feathers.controls.renderers
 		{
 			super();
 			this.isQuickHitAreaEnabled = false;
+			this.addEventListener(Event.TRIGGERED, itemRenderer_triggeredHandler);
 		}
 
 		/**
@@ -214,6 +214,13 @@ package feathers.controls.renderers
 		{
 			this._useStateDelayTimer = value;
 		}
+
+		/**
+		 * Determines if the item renderer can be selected even if
+		 * <code>isToggle</code> is set to <code>false</code>. Subclasses are
+		 * expected to change this value, if required.
+		 */
+		protected var isSelectableWithoutToggle:Boolean = true;
 
 		/**
 		 * @private
@@ -422,7 +429,7 @@ package feathers.controls.renderers
 		 */
 		override protected function set currentState(value:String):void
 		{
-			if(!this._isToggle)
+			if(!this._isToggle && !this.isSelectableWithoutToggle)
 			{
 				value = STATE_UP;
 			}
@@ -589,6 +596,15 @@ package feathers.controls.renderers
 		/**
 		 * A function used to generate an icon for a specific item.
 		 *
+		 * <p>Note: As the list scrolls, this function will almost always be
+		 * called more than once for each individual item in the list's data
+		 * provider. Your function should not simply return a new icon every
+		 * time. This will result in the unnecessary creation and destruction of
+		 * many icons, which will overwork the garbage collector and hurt
+		 * performance. It's better to return a new icon the first time this
+		 * function is called for a particular item and then return the same
+		 * icon if that item is passed to this function again.</p>
+		 *
 		 * <p>The function is expected to have the following signature:</p>
 		 * <pre>function( item:Object ):DisplayObject</pre>
 		 *
@@ -690,6 +706,19 @@ package feathers.controls.renderers
 		 * a <code>iconField</code> or <code>iconFunction</code>
 		 * because the renderer can avoid costly display list manipulation.</p>
 		 *
+		 * <p>Note: As the list scrolls, this function will almost always be
+		 * called more than once for each individual item in the list's data
+		 * provider. Your function should not simply return a new texture every
+		 * time. This will result in the unnecessary creation and destruction of
+		 * many textures, which will overwork the garbage collector and hurt
+		 * performance. Creating a new texture at all is dangerous, unless you
+		 * are absolutely sure to dispose it when necessary because neither the
+		 * list nor its item renderer will dispose of the texture for you. If
+		 * you are absolutely sure that you are managing the texture memory with
+		 * proper disposal, it's better to return a new texture the first
+		 * time this function is called for a particular item and then return
+		 * the same texture if that item is passed to this function again.</p>
+		 *
 		 * <p>The function is expected to have the following signature:</p>
 		 * <pre>function( item:Object ):Object</pre>
 		 *
@@ -783,6 +812,15 @@ package feathers.controls.renderers
 		 * accessory position of the renderer. If you wish to display an
 		 * <code>Image</code> in the accessory position, it's better for
 		 * performance to use <code>accessorySourceFunction</code> instead.
+		 *
+		 * <p>Note: As the list scrolls, this function will almost always be
+		 * called more than once for each individual item in the list's data
+		 * provider. Your function should not simply return a new accessory
+		 * every time. This will result in the unnecessary creation and
+		 * destruction of many icons, which will overwork the garbage collector
+		 * and hurt performance. It's better to return a new accessory the first
+		 * time this function is called for a particular item and then return
+		 * the same accessory if that item is passed to this function again.</p>
 		 *
 		 * <p>The function is expected to have the following signature:</p>
 		 * <pre>function( item:Object ):DisplayObject</pre>
@@ -892,6 +930,19 @@ package feathers.controls.renderers
 		 * passing in an <code>ImageLoader</code> or <code>Image</code> through
 		 * a <code>accessoryField</code> or <code>accessoryFunction</code>
 		 * because the renderer can avoid costly display list manipulation.</p>
+		 *
+		 * <p>Note: As the list scrolls, this function will almost always be
+		 * called more than once for each individual item in the list's data
+		 * provider. Your function should not simply return a new texture every
+		 * time. This will result in the unnecessary creation and destruction of
+		 * many textures, which will overwork the garbage collector and hurt
+		 * performance. Creating a new texture at all is dangerous, unless you
+		 * are absolutely sure to dispose it when necessary because neither the
+		 * list nor its item renderer will dispose of the texture for you. If
+		 * you are absolutely sure that you are managing the texture memory with
+		 * proper disposal, it's better to return a new texture the first
+		 * time this function is called for a particular item and then return
+		 * the same texture if that item is passed to this function again.</p>
 		 *
 		 * <p>The function is expected to have the following signature:</p>
 		 * <pre>function( item:Object ):Object</pre>
@@ -1160,7 +1211,10 @@ package feathers.controls.renderers
 		protected var _accessoryLabelProperties:PropertyProxy;
 
 		/**
-		 * A set of key/value pairs to be passed down to a label accessory.
+		 * A set of key/value pairs to be passed down to a label accessory. The
+		 * title is an <code>ITextRenderer</code> instance. The available
+		 * properties depend on which <code>ITextRenderer</code> implementation
+		 * is used.
 		 *
 		 * <p>If the subcomponent has its own subcomponents, their properties
 		 * can be set too, using attribute <code>&#64;</code> notation. For example,
@@ -1169,7 +1223,12 @@ package feathers.controls.renderers
 		 * you can use the following syntax:</p>
 		 * <pre>list.scrollerProperties.&#64;verticalScrollBarProperties.&#64;thumbProperties.defaultSkin = new Image(texture);</pre>
 		 *
+		 * <p>Setting properties in a <code>accessoryLabelFactory</code>
+		 * function instead of using <code>accessoryLabelProperties</code> will
+		 * result in better performance.</p>
+		 *
 		 * @see feathers.core.ITextRenderer
+		 * @see #accessoryLabelFactory
 		 * @see #accessoryLabelField
 		 * @see #accessoryLabelFunction
 		 */
@@ -1223,6 +1282,15 @@ package feathers.controls.renderers
 		{
 			this.replaceIcon(null);
 			this.replaceAccessory(null);
+			if(this._stateDelayTimer)
+			{
+				if(this._stateDelayTimer.running)
+				{
+					this._stateDelayTimer.stop();
+				}
+				this._stateDelayTimer.removeEventListener(TimerEvent.TIMER_COMPLETE, stateDelayTimer_timerCompleteHandler);
+				this._stateDelayTimer = null;
+			}
 			super.dispose();
 		}
 
@@ -1240,11 +1308,11 @@ package feathers.controls.renderers
 		{
 			if(this._labelFunction != null)
 			{
-				return this._labelFunction(item) as String;
+				return this._labelFunction(item).toString();
 			}
 			else if(this._labelField != null && item && item.hasOwnProperty(this._labelField))
 			{
-				return item[this._labelField] as String;
+				return item[this._labelField].toString();
 			}
 			else if(item is Object)
 			{
@@ -1309,7 +1377,7 @@ package feathers.controls.renderers
 		{
 			if(this._accessorySourceFunction != null)
 			{
-				var source:Texture = this._accessorySourceFunction(item);
+				var source:Object = this._accessorySourceFunction(item);
 				this.refreshAccessorySource(source);
 				return this.accessoryImage;
 			}
@@ -1321,13 +1389,13 @@ package feathers.controls.renderers
 			}
 			else if(this._accessoryLabelFunction != null)
 			{
-				var label:String = this._accessoryLabelFunction(item) as String;
+				var label:String = this._accessoryLabelFunction(item).toString();
 				this.refreshAccessoryLabel(label);
 				return DisplayObject(this.accessoryLabel);
 			}
 			else if(this._accessoryLabelField != null && item && item.hasOwnProperty(this._accessoryLabelField))
 			{
-				label = item[this._accessoryLabelField] as String;
+				label = item[this._accessoryLabelField].toString();
 				this.refreshAccessoryLabel(label);
 				return DisplayObject(this.accessoryLabel);
 			}
@@ -1592,6 +1660,13 @@ package feathers.controls.renderers
 				this.iconImage = null;
 			}
 
+			if(this._itemHasIcon && this.currentIcon && this.currentIcon != newIcon)
+			{
+				//the icon is created using the data provider, and it is not
+				//created inside this class, so it is not our responsibility to
+				//dispose the icon. if we dispose it, it may break something.
+				this.currentIcon.removeFromParent(false);
+			}
 			this.defaultIcon = newIcon;
 		}
 
@@ -1607,6 +1682,7 @@ package feathers.controls.renderers
 
 			if(this.accessory)
 			{
+				this.accessory.removeEventListener(FeathersEventType.RESIZE, accessory_resizeHandler);
 				this.accessory.removeEventListener(TouchEvent.TOUCH, accessory_touchHandler);
 
 				//the accessory may have come from outside of this class. it's
@@ -1637,9 +1713,13 @@ package feathers.controls.renderers
 
 			if(this.accessory)
 			{
-				if(this.accessory is IFeathersControl && !(this.accessory is BitmapFontTextRenderer))
+				if(this.accessory is IFeathersControl)
 				{
-					this.accessory.addEventListener(TouchEvent.TOUCH, accessory_touchHandler);
+					if(!(this.accessory is BitmapFontTextRenderer))
+					{
+						this.accessory.addEventListener(TouchEvent.TOUCH, accessory_touchHandler);
+					}
+					this.accessory.addEventListener(FeathersEventType.RESIZE, accessory_resizeHandler);
 				}
 				this.addChild(this.accessory);
 			}
@@ -1735,7 +1815,7 @@ package feathers.controls.renderers
 				this.positionSingleChild(labelRenderer);
 				if(this._layoutOrder == LAYOUT_ORDER_LABEL_ACCESSORY_ICON)
 				{
-					this.positionRelativeToOthers(this.accessory, labelRenderer, null, this._accessoryPosition, accessoryGap);
+					this.positionRelativeToOthers(this.accessory, labelRenderer, null, this._accessoryPosition, accessoryGap, null, 0);
 					var iconPosition:String = this._iconPosition;
 					if(iconPosition == ICON_POSITION_LEFT_BASELINE)
 					{
@@ -1745,12 +1825,12 @@ package feathers.controls.renderers
 					{
 						iconPosition = ICON_POSITION_RIGHT;
 					}
-					this.positionRelativeToOthers(this.currentIcon, labelRenderer, this.accessory, iconPosition, this._gap);
+					this.positionRelativeToOthers(this.currentIcon, labelRenderer, this.accessory, iconPosition, this._gap, this._accessoryPosition, accessoryGap);
 				}
 				else
 				{
 					this.positionLabelAndIcon();
-					this.positionRelativeToOthers(this.accessory, labelRenderer, this.currentIcon, this._accessoryPosition, accessoryGap);
+					this.positionRelativeToOthers(this.accessory, labelRenderer, this.currentIcon, this._accessoryPosition, accessoryGap, this._iconPosition, this._gap);
 				}
 			}
 			else if(this._label)
@@ -1764,7 +1844,7 @@ package feathers.controls.renderers
 				}
 				else if(accessoryIsInLayout)
 				{
-					this.positionRelativeToOthers(this.accessory, labelRenderer, null, this._accessoryPosition, accessoryGap);
+					this.positionRelativeToOthers(this.accessory, labelRenderer, null, this._accessoryPosition, accessoryGap, null, 0);
 				}
 			}
 			else if(iconIsInLayout)
@@ -1772,7 +1852,7 @@ package feathers.controls.renderers
 				this.positionSingleChild(this.currentIcon);
 				if(accessoryIsInLayout)
 				{
-					this.positionRelativeToOthers(this.accessory, this.currentIcon, null, this._accessoryPosition, accessoryGap);
+					this.positionRelativeToOthers(this.accessory, this.currentIcon, null, this._accessoryPosition, accessoryGap, null, 0);
 				}
 			}
 			else if(accessoryIsInLayout)
@@ -1825,15 +1905,16 @@ package feathers.controls.renderers
 			{
 				IFeathersControl(this.accessory).validate();
 			}
+			const adjustedGap:Number = this._gap == Number.POSITIVE_INFINITY ? Math.min(this._paddingLeft, this._paddingRight) : this._gap;
 			if(this.currentIcon && (this._iconPosition == ICON_POSITION_LEFT || this._iconPosition == ICON_POSITION_LEFT_BASELINE ||
 				this._iconPosition == ICON_POSITION_RIGHT || this._iconPosition == ICON_POSITION_RIGHT_BASELINE))
 			{
-				calculatedWidth -= (this._gap + this.currentIcon.width);
+				calculatedWidth -= (adjustedGap + this.currentIcon.width);
 			}
 
 			if(this.accessory && (this._accessoryPosition == ACCESSORY_POSITION_LEFT || this._accessoryPosition == ACCESSORY_POSITION_RIGHT))
 			{
-				var accessoryGap:Number = (isNaN(this._accessoryGap) || this._accessoryGap == Number.POSITIVE_INFINITY) ? this._gap : this._accessoryGap;
+				const accessoryGap:Number = (isNaN(this._accessoryGap) || this._accessoryGap == Number.POSITIVE_INFINITY) ? adjustedGap : this._accessoryGap;
 				calculatedWidth -= (accessoryGap + this.accessory.width);
 			}
 
@@ -1843,7 +1924,7 @@ package feathers.controls.renderers
 		/**
 		 * @private
 		 */
-		protected function positionRelativeToOthers(object:DisplayObject, relativeTo:DisplayObject, relativeTo2:DisplayObject, position:String, gap:Number):void
+		protected function positionRelativeToOthers(object:DisplayObject, relativeTo:DisplayObject, relativeTo2:DisplayObject, position:String, gap:Number, otherPosition:String, otherGap:Number):void
 		{
 			const relativeToX:Number = relativeTo2 ? Math.min(relativeTo.x, relativeTo2.x) : relativeTo.x;
 			const relativeToY:Number = relativeTo2 ? Math.min(relativeTo.y, relativeTo2.y) : relativeTo.y;
@@ -1868,6 +1949,10 @@ package feathers.controls.renderers
 					{
 						newRelativeToY += (object.height + gap) / 2;
 					}
+					if(relativeTo2)
+					{
+						newRelativeToY = Math.max(newRelativeToY, this._paddingTop + object.height + gap);
+					}
 					object.y = newRelativeToY - object.height - gap;
 				}
 			}
@@ -1887,6 +1972,10 @@ package feathers.controls.renderers
 					else if(this._horizontalAlign == HORIZONTAL_ALIGN_CENTER)
 					{
 						newRelativeToX -= (object.width + gap) / 2;
+					}
+					if(relativeTo2)
+					{
+						newRelativeToX = Math.min(newRelativeToX, this.actualWidth - this._paddingRight - object.width - relativeToWidth - gap);
 					}
 					object.x = newRelativeToX + relativeToWidth + gap;
 				}
@@ -1908,6 +1997,10 @@ package feathers.controls.renderers
 					{
 						newRelativeToY -= (object.height + gap) / 2;
 					}
+					if(relativeTo2)
+					{
+						newRelativeToY = Math.min(newRelativeToY, this.actualHeight - this._paddingBottom - object.height - relativeToHeight - gap);
+					}
 					object.y = newRelativeToY + relativeToHeight + gap;
 				}
 			}
@@ -1928,18 +2021,73 @@ package feathers.controls.renderers
 					{
 						newRelativeToX += (gap + object.width) / 2;
 					}
+					if(relativeTo2)
+					{
+						newRelativeToX = Math.max(newRelativeToX, this._paddingLeft + object.width + gap);
+					}
 					object.x = newRelativeToX - gap - object.width;
 				}
 			}
 
 			var offsetX:Number = newRelativeToX - relativeToX;
 			var offsetY:Number = newRelativeToY - relativeToY;
-			relativeTo.x += offsetX;
-			relativeTo.y += offsetY;
+			if(!relativeTo2 || otherGap != Number.POSITIVE_INFINITY || !(
+				(position == ACCESSORY_POSITION_TOP && otherPosition == ACCESSORY_POSITION_TOP) ||
+				(position == ACCESSORY_POSITION_RIGHT && otherPosition == ACCESSORY_POSITION_RIGHT) ||
+				(position == ACCESSORY_POSITION_BOTTOM && otherPosition == ACCESSORY_POSITION_BOTTOM) ||
+				(position == ACCESSORY_POSITION_LEFT && otherPosition == ACCESSORY_POSITION_LEFT)
+			))
+			{
+				relativeTo.x += offsetX;
+				relativeTo.y += offsetY;
+			}
 			if(relativeTo2)
 			{
-				relativeTo2.x += offsetX;
-				relativeTo2.y += offsetY;
+				if(otherGap != Number.POSITIVE_INFINITY || !(
+					(position == ACCESSORY_POSITION_LEFT && otherPosition == ACCESSORY_POSITION_RIGHT) ||
+					(position == ACCESSORY_POSITION_RIGHT && otherPosition == ACCESSORY_POSITION_LEFT) ||
+					(position == ACCESSORY_POSITION_TOP && otherPosition == ACCESSORY_POSITION_BOTTOM) ||
+					(position == ACCESSORY_POSITION_BOTTOM && otherPosition == ACCESSORY_POSITION_TOP)
+				))
+				{
+					relativeTo2.x += offsetX;
+					relativeTo2.y += offsetY;
+				}
+				if(gap == Number.POSITIVE_INFINITY && otherGap == Number.POSITIVE_INFINITY)
+				{
+					if(position == ACCESSORY_POSITION_RIGHT && otherPosition == ACCESSORY_POSITION_LEFT)
+					{
+						relativeTo.x = relativeTo2.x + (object.x - relativeTo2.x + relativeTo2.width - relativeTo.width) / 2;
+					}
+					else if(position == ACCESSORY_POSITION_LEFT && otherPosition == ACCESSORY_POSITION_RIGHT)
+					{
+						relativeTo.x = object.x + (relativeTo2.x - object.x + object.width - relativeTo.width) / 2;
+					}
+					else if(position == ACCESSORY_POSITION_RIGHT && otherPosition == ACCESSORY_POSITION_RIGHT)
+					{
+						relativeTo2.x = relativeTo.x + (object.x - relativeTo.x + relativeTo.width - relativeTo2.width) / 2;
+					}
+					else if(position == ACCESSORY_POSITION_LEFT && otherPosition == ACCESSORY_POSITION_LEFT)
+					{
+						relativeTo2.x = object.x + (relativeTo.x - object.x + object.width - relativeTo2.width) / 2;
+					}
+					else if(position == ACCESSORY_POSITION_BOTTOM && otherPosition == ACCESSORY_POSITION_TOP)
+					{
+						relativeTo.y = relativeTo2.y + (object.y - relativeTo2.y + relativeTo2.height - relativeTo.height) / 2;
+					}
+					else if(position == ACCESSORY_POSITION_TOP && otherPosition == ACCESSORY_POSITION_BOTTOM)
+					{
+						relativeTo.y = object.y + (relativeTo2.y - object.y + object.height - relativeTo.height) / 2;
+					}
+					else if(position == ACCESSORY_POSITION_BOTTOM && otherPosition == ACCESSORY_POSITION_BOTTOM)
+					{
+						relativeTo2.y = relativeTo.y + (object.y - relativeTo.y + relativeTo.height - relativeTo2.height) / 2;
+					}
+					else if(position == ACCESSORY_POSITION_TOP && otherPosition == ACCESSORY_POSITION_TOP)
+					{
+						relativeTo2.y = object.y + (relativeTo.y - object.y + object.height - relativeTo2.height) / 2;
+					}
+				}
 			}
 
 			if(position == ACCESSORY_POSITION_LEFT || position == ACCESSORY_POSITION_RIGHT)
@@ -1994,6 +2142,18 @@ package feathers.controls.renderers
 		/**
 		 * @private
 		 */
+		protected function itemRenderer_triggeredHandler(event:Event):void
+		{
+			if(this._isToggle || !this.isSelectableWithoutToggle)
+			{
+				return;
+			}
+			this.isSelected = true;
+		}
+
+		/**
+		 * @private
+		 */
 		protected function accessoryLabelProperties_onChange(proxy:PropertyProxy, name:String):void
 		{
 			this.invalidate(INVALIDATION_FLAG_STYLES);
@@ -2021,6 +2181,14 @@ package feathers.controls.renderers
 				return;
 			}
 			event.stopPropagation();
+		}
+
+		/**
+		 * @private
+		 */
+		protected function accessory_resizeHandler(event:Event):void
+		{
+			this.invalidate(INVALIDATION_FLAG_SIZE);
 		}
 
 		/**

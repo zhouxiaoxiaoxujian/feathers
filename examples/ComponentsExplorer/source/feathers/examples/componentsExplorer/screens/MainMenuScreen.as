@@ -4,6 +4,8 @@ package feathers.examples.componentsExplorer.screens
 	import feathers.controls.List;
 	import feathers.controls.PanelScreen;
 	import feathers.controls.Screen;
+	import feathers.controls.renderers.DefaultListItemRenderer;
+	import feathers.controls.renderers.IListItemRenderer;
 	import feathers.data.ListCollection;
 	import feathers.events.FeathersEventType;
 	import feathers.layout.AnchorLayout;
@@ -21,7 +23,9 @@ package feathers.examples.componentsExplorer.screens
 	[Event(name="showButtonGroup",type="starling.events.Event")]
 	[Event(name="showCallout",type="starling.events.Event")]
 	[Event(name="showGroupedList",type="starling.events.Event")]
+	[Event(name="showItemRenderer",type="starling.events.Event")]
 	[Event(name="showList",type="starling.events.Event")]
+	[Event(name="showNumericStepper",type="starling.events.Event")]
 	[Event(name="showPageIndicator",type="starling.events.Event")]
 	[Event(name="showPickerList",type="starling.events.Event")]
 	[Event(name="showProgressBar",type="starling.events.Event")]
@@ -37,7 +41,9 @@ package feathers.examples.componentsExplorer.screens
 		public static const SHOW_BUTTON_GROUP:String = "showButtonGroup";
 		public static const SHOW_CALLOUT:String = "showCallout";
 		public static const SHOW_GROUPED_LIST:String = "showGroupedList";
+		public static const SHOW_ITEM_RENDERER:String = "showItemRenderer";
 		public static const SHOW_LIST:String = "showList";
+		public static const SHOW_NUMERIC_STEPPER:String = "showNumericStepper";
 		public static const SHOW_PAGE_INDICATOR:String = "showPageIndicator";
 		public static const SHOW_PICKER_LIST:String = "showPickerList";
 		public static const SHOW_PROGRESS_BAR:String = "showProgressBar";
@@ -57,6 +63,8 @@ package feathers.examples.componentsExplorer.screens
 		
 		protected function initializeHandler(event:Event):void
 		{
+			var isTablet:Boolean = DeviceCapabilities.isTablet(Starling.current.nativeStage);
+
 			this.layout = new AnchorLayout();
 
 			this.headerProperties.title = "Feathers";
@@ -68,7 +76,9 @@ package feathers.examples.componentsExplorer.screens
 				{ label: "Button Group", event: SHOW_BUTTON_GROUP },
 				{ label: "Callout", event: SHOW_CALLOUT },
 				{ label: "Grouped List", event: SHOW_GROUPED_LIST },
+				{ label: "Item Renderer", event: SHOW_ITEM_RENDERER },
 				{ label: "List", event: SHOW_LIST },
+				{ label: "Numeric Stepper", event: SHOW_NUMERIC_STEPPER },
 				{ label: "Page Indicator", event: SHOW_PAGE_INDICATOR },
 				{ label: "Picker List", event: SHOW_PICKER_LIST },
 				{ label: "Progress Bar", event: SHOW_PROGRESS_BAR },
@@ -79,16 +89,27 @@ package feathers.examples.componentsExplorer.screens
 				{ label: "Toggles", event: SHOW_TOGGLES },
 			]);
 			this._list.layoutData = new AnchorLayoutData(0, 0, 0, 0);
+			this._list.clipContent = false;
 			this._list.addEventListener(Event.CHANGE, list_changeHandler);
-			if(!DeviceCapabilities.isTablet(Starling.current.nativeStage))
+
+			var itemRendererAccessorySourceFunction:Function = null;
+			if(!isTablet)
 			{
-				this._list.itemRendererProperties.accessorySourceFunction = accessorySourceFunction;
+				itemRendererAccessorySourceFunction = this.accessorySourceFunction;
 			}
-			else
+			this._list.itemRendererFactory = function():IListItemRenderer
+			{
+				var renderer:DefaultListItemRenderer = new DefaultListItemRenderer();
+				renderer.labelField = "label";
+				renderer.isQuickHitAreaEnabled = true;
+				renderer.accessorySourceFunction = itemRendererAccessorySourceFunction;
+				return renderer;
+			};
+
+			if(isTablet)
 			{
 				this._list.selectedIndex = 0;
 			}
-			this._list.itemRendererProperties.labelField = "label";
 			this.addChild(this._list);
 		}
 

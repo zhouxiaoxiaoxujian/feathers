@@ -49,6 +49,7 @@ package feathers.examples.componentsExplorer.screens
 			if(!DeviceCapabilities.isTablet(Starling.current.nativeStage))
 			{
 				this._backButton = new Button();
+				this._backButton.nameList.add(Button.ALTERNATE_NAME_BACK_BUTTON);
 				this._backButton.label = "Back";
 				this._backButton.addEventListener(Event.TRIGGERED, backButton_triggeredHandler);
 
@@ -56,10 +57,9 @@ package feathers.examples.componentsExplorer.screens
 				[
 					this._backButton
 				];
-			}
 
-			// handles the back hardware key on android
-			this.backButtonHandler = this.onBackButton;
+				this.backButtonHandler = this.onBackButton;
+			}
 		}
 
 		private function onBackButton():void

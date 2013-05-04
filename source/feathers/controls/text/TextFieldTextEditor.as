@@ -71,11 +71,6 @@ package feathers.controls.text
 		/**
 		 * @private
 		 */
-		protected static const INVALIDATION_FLAG_POSITION:String = "position";
-
-		/**
-		 * @private
-		 */
 		private static const HELPER_MATRIX:Matrix = new Matrix();
 
 		/**
@@ -89,6 +84,7 @@ package feathers.controls.text
 		public function TextFieldTextEditor()
 		{
 			this.isQuickHitAreaEnabled = true;
+			this.addEventListener(Event.ADDED_TO_STAGE, addedToStageHandler);
 			this.addEventListener(Event.REMOVED_FROM_STAGE, removedFromStageHandler);
 		}
 
@@ -131,17 +127,22 @@ package feathers.controls.text
 		/**
 		 * @private
 		 */
+		protected var _textFieldClipRect:Rectangle = new Rectangle();
+
+		/**
+		 * @private
+		 */
+		protected var _textFieldOffsetX:Number = 0;
+
+		/**
+		 * @private
+		 */
+		protected var _textFieldOffsetY:Number = 0;
+
+		/**
+		 * @private
+		 */
 		protected var _needsNewBitmap:Boolean = false;
-
-		/**
-		 * @private
-		 */
-		protected var _frameCount:int = 0;
-
-		/**
-		 * @private
-		 */
-		protected var _savedSelectionIndex:int = -1;
 
 		/**
 		 * @private
@@ -256,6 +257,32 @@ package feathers.controls.text
 		/**
 		 * @private
 		 */
+		protected var _multiline:Boolean = false;
+
+		/**
+		 * Same as the <code>TextField</code> property with the same name.
+		 */
+		public function get multiline():Boolean
+		{
+			return this._multiline;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set multiline(value:Boolean):void
+		{
+			if(this._multiline == value)
+			{
+				return;
+			}
+			this._multiline = value;
+			this.invalidate(INVALIDATION_FLAG_STYLES);
+		}
+
+		/**
+		 * @private
+		 */
 		protected var _isHTML:Boolean = false;
 
 		/**
@@ -334,7 +361,7 @@ package feathers.controls.text
 		/**
 		 * @private
 		 */
-		protected var _maxChars:int = int.MAX_VALUE;
+		protected var _maxChars:int = 0;
 
 		/**
 		 * Same as the <code>flash.text.TextField</code> property with the same name.
@@ -386,6 +413,41 @@ package feathers.controls.text
 		/**
 		 * @private
 		 */
+		protected var _isEditable:Boolean = true;
+
+		/**
+		 * Determines if the text input is editable. If the text input is not
+		 * editable, it will still appear enabled.
+		 */
+		public function get isEditable():Boolean
+		{
+			return this._isEditable;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set isEditable(value:Boolean):void
+		{
+			if(this._isEditable == value)
+			{
+				return;
+			}
+			this._isEditable = value;
+			this.invalidate(INVALIDATION_FLAG_STYLES);
+		}
+
+		/**
+		 * @inheritDoc
+		 */
+		public function get setTouchFocusOnEndedPhase():Boolean
+		{
+			return false;
+		}
+
+		/**
+		 * @private
+		 */
 		protected var _textFieldHasFocus:Boolean = false;
 
 		/**
@@ -408,10 +470,7 @@ package feathers.controls.text
 		 */
 		override public function dispose():void
 		{
-			if(this.textField.parent)
-			{
-				Starling.current.nativeStage.removeChild(this.textField);
-			}
+			this.disposeContent();
 			super.dispose();
 		}
 
@@ -420,23 +479,7 @@ package feathers.controls.text
 		 */
 		override public function render(support:RenderSupport, parentAlpha:Number):void
 		{
-			HELPER_POINT.x = HELPER_POINT.y = 0;
-			this.getTransformationMatrix(this.stage, HELPER_MATRIX);
-			MatrixUtil.transformCoords(HELPER_MATRIX, 0, 0, HELPER_POINT);
-			if(HELPER_POINT.x != this._oldGlobalX || HELPER_POINT.y != this._oldGlobalY)
-			{
-				this._oldGlobalX = HELPER_POINT.x;
-				this._oldGlobalY = HELPER_POINT.y;
-				const starlingViewPort:Rectangle = Starling.current.viewPort;
-				this.textField.x = Math.round(starlingViewPort.x + (HELPER_POINT.x * Starling.contentScaleFactor));
-				this.textField.y = Math.round(starlingViewPort.y + (HELPER_POINT.y * Starling.contentScaleFactor));
-			}
-
-			if(this.textSnapshot)
-			{
-				this.textSnapshot.x = Math.round(HELPER_MATRIX.tx) - HELPER_MATRIX.tx;
-				this.textSnapshot.y = Math.round(HELPER_MATRIX.ty) - HELPER_MATRIX.ty;
-			}
+			this.positionTextField();
 
 			//theoretically, this will ensure that the TextField is set visible
 			//or invisible immediately after the snapshot changes visibility in
@@ -463,23 +506,29 @@ package feathers.controls.text
 					const positionY:Number = position.y;
 					if(positionX < 0)
 					{
-						this._savedSelectionIndex = 0;
+						this._pendingSelectionStartIndex = this._pendingSelectionEndIndex = 0;
 					}
 					else
 					{
-						this._savedSelectionIndex = this.textField.getCharIndexAtPoint(positionX, positionY);
-						const bounds:Rectangle = this.textField.getCharBoundaries(this._savedSelectionIndex);
+						this._pendingSelectionStartIndex = this.textField.getCharIndexAtPoint(positionX, positionY);
+						if(this._pendingSelectionStartIndex < 0)
+						{
+							this._pendingSelectionStartIndex = this._text.length;
+						}
+						const bounds:Rectangle = this.textField.getCharBoundaries(this._pendingSelectionStartIndex);
 						if(bounds && (bounds.x + bounds.width - positionX) < (positionX - bounds.x))
 						{
-							this._savedSelectionIndex++;
+							this._pendingSelectionStartIndex++;
 						}
+						this._pendingSelectionEndIndex = this._pendingSelectionStartIndex;
 					}
 				}
 				else
 				{
-					this._savedSelectionIndex = -1;
+					this._pendingSelectionStartIndex = this._pendingSelectionEndIndex = -1;
 				}
 				Starling.current.nativeStage.focus = this.textField;
+				this.textField.requestSoftKeyboard();
 			}
 			else
 			{
@@ -518,17 +567,48 @@ package feathers.controls.text
 		}
 
 		/**
+		 * @inheritDoc
+		 */
+		public function measureText(result:Point = null):Point
+		{
+			if(!result)
+			{
+				result = new Point();
+			}
+
+			if(!this.textField)
+			{
+				result.x = result.y = 0;
+				return result;
+			}
+
+			const needsWidth:Boolean = isNaN(this.explicitWidth);
+			const needsHeight:Boolean = isNaN(this.explicitHeight);
+			if(!needsWidth && !needsHeight)
+			{
+				result.x = this.explicitWidth;
+				result.y = this.explicitHeight;
+				return result;
+			}
+
+			this.commit();
+
+			result = this.measure(result);
+
+			return result;
+		}
+
+		/**
 		 * @private
 		 */
 		override protected function initialize():void
 		{
 			this.textField = new TextField();
-			this.textField.type = TextFieldType.INPUT;
-			this.textField.selectable = true;
+			this.textField.needsSoftKeyboard = true;
 			this.textField.addEventListener(flash.events.Event.CHANGE, textField_changeHandler);
 			this.textField.addEventListener(FocusEvent.FOCUS_IN, textField_focusInHandler);
 			this.textField.addEventListener(FocusEvent.FOCUS_OUT, textField_focusOutHandler);
-			this.textField.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, textField_keyDownHandler);
+			this.textField.addEventListener(KeyboardEvent.KEY_DOWN, textField_keyDownHandler);
 		}
 
 		/**
@@ -536,23 +616,28 @@ package feathers.controls.text
 		 */
 		override protected function draw():void
 		{
-			const stateInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_STATE);
-			const stylesInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_STYLES);
-			const dataInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_DATA);
-			const positionInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_POSITION);
-			const skinInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_SKIN);
 			var sizeInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_SIZE);
 
-			if(dataInvalid || stylesInvalid)
-			{
-				this.commitStylesAndData();
-			}
+			this.commit();
 
 			sizeInvalid = this.autoSizeIfNeeded() || sizeInvalid;
 
 			this.layout(sizeInvalid);
+		}
 
-			this.doPendingActions();
+		/**
+		 * @private
+		 */
+		protected function commit():void
+		{
+			const stylesInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_STYLES);
+			const dataInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_DATA);
+			const stateInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_STATE);
+
+			if(dataInvalid || stylesInvalid || stateInvalid)
+			{
+				this.commitStylesAndData();
+			}
 		}
 
 		/**
@@ -567,8 +652,24 @@ package feathers.controls.text
 				return false;
 			}
 
+			this.measure(HELPER_POINT);
+			return this.setSizeInternal(HELPER_POINT.x, HELPER_POINT.y, false);
+		}
+
+		/**
+		 * @private
+		 */
+		protected function measure(result:Point = null):Point
+		{
+			if(!result)
+			{
+				result = new Point();
+			}
+
+			const needsWidth:Boolean = isNaN(this.explicitWidth);
+			const needsHeight:Boolean = isNaN(this.explicitHeight);
+
 			this.textField.autoSize = TextFieldAutoSize.LEFT;
-			this.textField.wordWrap = false;
 
 			var newWidth:Number = this.explicitWidth;
 			if(needsWidth)
@@ -577,11 +678,10 @@ package feathers.controls.text
 			}
 
 			this.textField.width = newWidth;
-			this.textField.wordWrap = this._wordWrap;
 			var newHeight:Number = this.explicitHeight;
 			if(needsHeight)
 			{
-				newHeight = Math.max(this._minHeight, Math.min(this._maxHeight, this.textField.height));
+				newHeight = Math.max(this._minHeight, Math.min(this._maxHeight, this.textField.textHeight + 4));
 			}
 
 			this.textField.autoSize = TextFieldAutoSize.NONE;
@@ -591,7 +691,10 @@ package feathers.controls.text
 			this.textField.width = this.actualWidth;
 			this.textField.height = this.actualHeight;
 
-			return this.setSizeInternal(newWidth, newHeight, false);
+			result.x = newWidth;
+			result.y = newHeight;
+
+			return result;
 		}
 
 		/**
@@ -604,18 +707,37 @@ package feathers.controls.text
 			this.textField.alwaysShowSelection = this._alwaysShowSelection;
 			this.textField.displayAsPassword = this._displayAsPassword;
 			this.textField.wordWrap = this._wordWrap;
+			this.textField.multiline = this._multiline;
 			this.textField.embedFonts = this._embedFonts;
+			this.textField.type = this._isEditable ? TextFieldType.INPUT : TextFieldType.DYNAMIC;
+			this.textField.selectable = this._isEnabled;
 			if(this._textFormat)
 			{
 				this.textField.defaultTextFormat = this._textFormat;
 			}
 			if(this._isHTML)
 			{
-				this.textField.htmlText = this._text;
+				if(this.textField.htmlText != this._text)
+				{
+					if(this._pendingSelectionStartIndex < 0)
+					{
+						this._pendingSelectionStartIndex = this.textField.selectionBeginIndex;
+						this._pendingSelectionEndIndex = this.textField.selectionEndIndex;
+					}
+					this.textField.htmlText = this._text;
+				}
 			}
 			else
 			{
-				this.textField.text = this._text;
+				if(this.textField.text != this._text)
+				{
+					if(this._pendingSelectionStartIndex < 0)
+					{
+						this._pendingSelectionStartIndex = this.textField.selectionBeginIndex;
+						this._pendingSelectionEndIndex = this.textField.selectionEndIndex;
+					}
+					this.textField.text = this._text;
+				}
 			}
 		}
 
@@ -629,24 +751,71 @@ package feathers.controls.text
 
 			if(sizeInvalid)
 			{
+				this.refreshSnapshotParameters();
 				this.textField.width = this.actualWidth;
 				this.textField.height = this.actualHeight;
-				this._snapshotWidth = getNextPowerOfTwo(this.actualWidth * Starling.contentScaleFactor);
-				this._snapshotHeight = getNextPowerOfTwo(this.actualHeight * Starling.contentScaleFactor);
-				this._needsNewBitmap = this._needsNewBitmap || !this._textSnapshotBitmapData || this._snapshotWidth != this._textSnapshotBitmapData.width || this._snapshotHeight != this._textSnapshotBitmapData.height;
 			}
+
+			this.checkIfNewSnapshotIsNeeded();
 
 			if(!this._textFieldHasFocus && (stylesInvalid || dataInvalid || this._needsNewBitmap))
 			{
 				const hasText:Boolean = this._text.length > 0;
 				if(hasText)
 				{
-					//we need to wait a frame (sometimes two!) for the TextField
-					//to render properly. yes, really.
-					this._frameCount = 0;
+					//we need to wait a frame for the TextField to render
+					//properly. sometimes two, and this is a known issue.
 					this.addEventListener(Event.ENTER_FRAME, enterFrameHandler);
 				}
 			}
+			this.doPendingActions();
+		}
+
+		/**
+		 * @private
+		 */
+		protected function refreshSnapshotParameters():void
+		{
+			this._textFieldOffsetX = 0;
+			this._textFieldOffsetY = 0;
+			this._textFieldClipRect.x = 0;
+			this._textFieldClipRect.y = 0;
+			this._textFieldClipRect.width = this.actualWidth;
+			this._textFieldClipRect.height = this.actualHeight;
+		}
+
+		/**
+		 * @private
+		 */
+		protected function positionTextField():void
+		{
+			HELPER_POINT.x = HELPER_POINT.y = 0;
+			this.getTransformationMatrix(this.stage, HELPER_MATRIX);
+			MatrixUtil.transformCoords(HELPER_MATRIX, 0, 0, HELPER_POINT);
+			if(HELPER_POINT.x != this._oldGlobalX || HELPER_POINT.y != this._oldGlobalY)
+			{
+				this._oldGlobalX = HELPER_POINT.x;
+				this._oldGlobalY = HELPER_POINT.y;
+				const starlingViewPort:Rectangle = Starling.current.viewPort;
+				this.textField.x = Math.round(starlingViewPort.x + (HELPER_POINT.x * Starling.contentScaleFactor));
+				this.textField.y = Math.round(starlingViewPort.y + (HELPER_POINT.y * Starling.contentScaleFactor));
+			}
+
+			if(this.textSnapshot)
+			{
+				this.textSnapshot.x = Math.round(HELPER_MATRIX.tx) - HELPER_MATRIX.tx;
+				this.textSnapshot.y = Math.round(HELPER_MATRIX.ty) - HELPER_MATRIX.ty;
+			}
+		}
+
+		/**
+		 * @private
+		 */
+		protected function checkIfNewSnapshotIsNeeded():void
+		{
+			this._snapshotWidth = getNextPowerOfTwo(this._textFieldClipRect.width * Starling.contentScaleFactor);
+			this._snapshotHeight = getNextPowerOfTwo(this._textFieldClipRect.height * Starling.contentScaleFactor);
+			this._needsNewBitmap = this._needsNewBitmap || !this._textSnapshotBitmapData || this._snapshotWidth != this._textSnapshotBitmapData.width || this._snapshotHeight != this._textSnapshotBitmapData.height;
 		}
 
 		/**
@@ -692,9 +861,10 @@ package feathers.controls.text
 				return;
 			}
 			HELPER_MATRIX.identity();
+			HELPER_MATRIX.translate(this._textFieldOffsetX, this._textFieldOffsetY);
 			HELPER_MATRIX.scale(Starling.contentScaleFactor, Starling.contentScaleFactor);
 			this._textSnapshotBitmapData.fillRect(this._textSnapshotBitmapData.rect, 0x00ff00ff);
-			this._textSnapshotBitmapData.draw(this.textField, HELPER_MATRIX);
+			this._textSnapshotBitmapData.draw(this.textField, HELPER_MATRIX, null, null, this._textFieldClipRect);
 			if(!this.textSnapshot)
 			{
 				this.textSnapshot = new Image(starling.textures.Texture.fromBitmapData(this._textSnapshotBitmapData, false, false, Starling.contentScaleFactor));
@@ -725,8 +895,23 @@ package feathers.controls.text
 		/**
 		 * @private
 		 */
-		protected function removedFromStageHandler(event:Event):void
+		protected function disposeContent():void
 		{
+			if(this._textSnapshotBitmapData)
+			{
+				this._textSnapshotBitmapData.dispose();
+				this._textSnapshotBitmapData = null;
+			}
+
+			if(this.textSnapshot)
+			{
+				//avoid the need to call dispose(). we'll create a new snapshot
+				//when the renderer is added to stage again.
+				this.textSnapshot.texture.dispose();
+				this.removeChild(this.textSnapshot, true);
+				this.textSnapshot = null;
+			}
+
 			if(this.textField.parent)
 			{
 				Starling.current.nativeStage.removeChild(this.textField);
@@ -736,13 +921,25 @@ package feathers.controls.text
 		/**
 		 * @private
 		 */
+		protected function addedToStageHandler(event:Event):void
+		{
+			//we need to invalidate in order to get a fresh snapshot
+			this.invalidate(INVALIDATION_FLAG_DATA);
+		}
+
+		/**
+		 * @private
+		 */
+		protected function removedFromStageHandler(event:Event):void
+		{
+			this.disposeContent();
+		}
+
+		/**
+		 * @private
+		 */
 		protected function enterFrameHandler(event:Event):void
 		{
-			this._frameCount++;
-			if(this._frameCount < 2)
-			{
-				return;
-			}
 			this.removeEventListener(Event.ENTER_FRAME, enterFrameHandler);
 			if(this.textSnapshot)
 			{
@@ -769,12 +966,6 @@ package feathers.controls.text
 			{
 				this.textSnapshot.visible = false;
 			}
-			if(this._savedSelectionIndex >= 0)
-			{
-				const selectionIndex:int = this._savedSelectionIndex;
-				this._savedSelectionIndex = -1;
-				this.selectRange(selectionIndex, selectionIndex)
-			}
 			this.invalidate(INVALIDATION_FLAG_SKIN);
 			this.dispatchEventWith(FeathersEventType.FOCUS_IN);
 		}
@@ -796,11 +987,11 @@ package feathers.controls.text
 		/**
 		 * @private
 		 */
-		protected function textField_keyDownHandler(event:flash.events.KeyboardEvent):void
+		protected function textField_keyDownHandler(event:KeyboardEvent):void
 		{
-			if(event.keyCode == Keyboard.TAB)
+			if(event.keyCode == Keyboard.ENTER)
 			{
-				event.preventDefault();
+				this.dispatchEventWith(FeathersEventType.ENTER);
 			}
 		}
 	}

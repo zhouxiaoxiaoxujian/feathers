@@ -56,7 +56,7 @@ package feathers.examples.tileList
 			this._list.height = this._pageIndicator.y;
 			this._list.validate();
 
-			this._pageIndicator.pageCount = Math.ceil(this._list.maxHorizontalScrollPosition / this._list.width) + 1;
+			this._pageIndicator.pageCount = this._list.horizontalPageCount;
 		}
 
 		protected function addedToStageHandler(event:Event):void
@@ -102,6 +102,8 @@ package feathers.examples.tileList
 			listLayout.useSquareTiles = false;
 			listLayout.tileHorizontalAlign = TiledRowsLayout.TILE_HORIZONTAL_ALIGN_CENTER;
 			listLayout.horizontalAlign = TiledRowsLayout.HORIZONTAL_ALIGN_CENTER;
+			listLayout.manageVisibility = true;
+			listLayout.manageVisibility = true;
 
 			this._list = new List();
 			this._list.dataProvider = collection;
@@ -152,7 +154,7 @@ package feathers.examples.tileList
 
 		protected function pageIndicator_changeHandler(event:Event):void
 		{
-			this._list.scrollToPageIndex(this._pageIndicator.selectedIndex, 0, 0.25);
+			this._list.scrollToPageIndex(this._pageIndicator.selectedIndex, 0, this._list.pageThrowDuration);
 		}
 
 		protected function stage_resizeHandler(event:ResizeEvent):void

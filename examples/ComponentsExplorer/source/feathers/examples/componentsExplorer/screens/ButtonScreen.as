@@ -4,9 +4,8 @@ package feathers.examples.componentsExplorer.screens
 	import feathers.controls.ImageLoader;
 	import feathers.controls.PanelScreen;
 	import feathers.events.FeathersEventType;
-	import feathers.examples.componentsExplorer.data.ButtonSettings;
-	import feathers.layout.AnchorLayout;
-	import feathers.layout.AnchorLayoutData;
+	import feathers.examples.componentsExplorer.data.EmbeddedAssets;
+	import feathers.layout.VerticalLayout;
 	import feathers.system.DeviceCapabilities;
 
 	import starling.core.Starling;
@@ -15,14 +14,9 @@ package feathers.examples.componentsExplorer.screens
 	import starling.textures.Texture;
 
 	[Event(name="complete",type="starling.events.Event")]
-	[Event(name="showSettings",type="starling.events.Event")]
 
 	public class ButtonScreen extends PanelScreen
 	{
-		[Embed(source="/../assets/images/skull.png")]
-		private static const SKULL_ICON:Class;
-
-		public static const SHOW_SETTINGS:String = "showSettings";
 		
 		public function ButtonScreen()
 		{
@@ -30,63 +24,83 @@ package feathers.examples.componentsExplorer.screens
 			this.addEventListener(FeathersEventType.INITIALIZE, initializeHandler);
 		}
 
-		public var settings:ButtonSettings;
+		private var _normalButton:Button;
+		private var _iconButton:Button;
+		private var _toggleButton:Button;
+		private var _callToActionButton:Button;
+		private var _quietButton:Button;
+		private var _dangerButton:Button;
+		private var _sampleBackButton:Button;
+		private var _forwardButton:Button;
 
-		private var _button:Button;
 		private var _backButton:Button;
-		private var _settingsButton:Button;
 		
 		private var _icon:ImageLoader;
-		private var _iconTexture:Texture;
-
-		override public function dispose():void
-		{
-			if(this._iconTexture)
-			{
-				//since we created this texture, it's up to us to dispose it
-				this._iconTexture.dispose();
-			}
-			super.dispose();
-		}
 		
 		protected function initializeHandler(event:Event):void
 		{
-			this.layout = new AnchorLayout();
+			const verticalLayout:VerticalLayout = new VerticalLayout();
+			verticalLayout.horizontalAlign = VerticalLayout.HORIZONTAL_ALIGN_CENTER;
+			verticalLayout.verticalAlign = VerticalLayout.VERTICAL_ALIGN_TOP;
+			verticalLayout.padding = 20 * this.dpiScale;
+			verticalLayout.gap = 16 * this.dpiScale;
+			this.layout = verticalLayout;
+			
+			this._normalButton = new Button();
+			this._normalButton.label = "Normal Button";
+			this._normalButton.addEventListener(Event.TRIGGERED, normalButton_triggeredHandler);
+			this.addChild(this._normalButton);
 
-			this._iconTexture = Texture.fromBitmap(new SKULL_ICON());
 			this._icon = new ImageLoader();
-			this._icon.source = this._iconTexture;
+			this._icon.source = EmbeddedAssets.SKULL_ICON_DARK;
 			//the icon will be blurry if it's not on a whole pixel. ImageLoader
 			//can snap to pixels to fix that issue.
 			this._icon.snapToPixels = true;
 			this._icon.textureScale = this.dpiScale;
-			
-			this._button = new Button();
-			this._button.label = "Click Me";
-			this._button.isToggle = this.settings.isToggle;
-			if(this.settings.hasIcon)
-			{
-				this._button.defaultIcon = this._icon;
-			}
-			this._button.horizontalAlign = this.settings.horizontalAlign;
-			this._button.verticalAlign = this.settings.verticalAlign;
-			this._button.iconPosition = this.settings.iconPosition;
-			this._button.iconOffsetX = this.settings.iconOffsetX;
-			this._button.iconOffsetY = this.settings.iconOffsetY;
-			this._button.width = 264 * this.dpiScale;
-			this._button.height = 264 * this.dpiScale;
-			const buttonLayoutData:AnchorLayoutData = new AnchorLayoutData();
-			buttonLayoutData.horizontalCenter = 0;
-			buttonLayoutData.verticalCenter = 0;
-			this._button.layoutData = buttonLayoutData;
-			this._button.addEventListener(Event.TRIGGERED, button_triggeredHandler);
-			this.addChild(this._button);
+
+			this._iconButton = new Button();
+			this._iconButton.label = "Icon Button";
+			this._iconButton.defaultIcon = this._icon;
+			this.addChild(this._iconButton);
+
+			this._toggleButton = new Button();
+			this._toggleButton.label = "Toggle Button";
+			this._toggleButton.isToggle = true;
+			this._toggleButton.isSelected = true;
+			this._toggleButton.addEventListener(Event.CHANGE, toggleButton_changeHandler);
+			this.addChild(this._toggleButton);
+
+			this._callToActionButton = new Button();
+			this._callToActionButton.nameList.add(Button.ALTERNATE_NAME_CALL_TO_ACTION_BUTTON);
+			this._callToActionButton.label = "Call to Action Button";
+			this.addChild(this._callToActionButton);
+
+			this._quietButton = new Button();
+			this._quietButton.nameList.add(Button.ALTERNATE_NAME_QUIET_BUTTON);
+			this._quietButton.label = "Quiet Button";
+			this.addChild(this._quietButton);
+
+			this._dangerButton = new Button();
+			this._dangerButton.nameList.add(Button.ALTERNATE_NAME_DANGER_BUTTON);
+			this._dangerButton.label = "Danger Button";
+			this.addChild(this._dangerButton);
+
+			this._sampleBackButton = new Button();
+			this._sampleBackButton.nameList.add(Button.ALTERNATE_NAME_BACK_BUTTON);
+			this._sampleBackButton.label = "Back Button";
+			this.addChild(this._sampleBackButton);
+
+			this._forwardButton = new Button();
+			this._forwardButton.nameList.add(Button.ALTERNATE_NAME_FORWARD_BUTTON);
+			this._forwardButton.label = "Forward Button";
+			this.addChild(this._forwardButton);
 
 			this.headerProperties.title = "Button";
 
 			if(!DeviceCapabilities.isTablet(Starling.current.nativeStage))
 			{
 				this._backButton = new Button();
+				this._backButton.nameList.add(Button.ALTERNATE_NAME_BACK_BUTTON);
 				this._backButton.label = "Back";
 				this._backButton.addEventListener(Event.TRIGGERED, backButton_triggeredHandler);
 
@@ -94,19 +108,9 @@ package feathers.examples.componentsExplorer.screens
 				[
 					this._backButton
 				];
+
+				this.backButtonHandler = this.onBackButton;
 			}
-
-			this._settingsButton = new Button();
-			this._settingsButton.label = "Settings";
-			this._settingsButton.addEventListener(Event.TRIGGERED, settingsButton_triggeredHandler);
-
-			this.headerProperties.rightItems = new <DisplayObject>
-			[
-				this._settingsButton
-			];
-			
-			// handles the back hardware key on android
-			this.backButtonHandler = this.onBackButton;
 		}
 		
 		private function onBackButton():void
@@ -114,19 +118,19 @@ package feathers.examples.componentsExplorer.screens
 			this.dispatchEventWith(Event.COMPLETE);
 		}
 
-		private function button_triggeredHandler(event:Event):void
+		private function normalButton_triggeredHandler(event:Event):void
 		{
-			trace("button triggered.")
+			trace("normal button triggered.")
+		}
+
+		private function toggleButton_changeHandler(event:Event):void
+		{
+			trace("toggle button changed:", this._toggleButton.isSelected);
 		}
 		
 		private function backButton_triggeredHandler(event:Event):void
 		{
 			this.onBackButton();
-		}
-
-		private function settingsButton_triggeredHandler(event:Event):void
-		{
-			this.dispatchEventWith(SHOW_SETTINGS);
 		}
 	}
 }

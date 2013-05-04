@@ -3,20 +3,25 @@ package feathers.examples.componentsExplorer
 	import feathers.controls.ScreenNavigator;
 	import feathers.controls.ScreenNavigatorItem;
 	import feathers.controls.ScrollContainer;
-	import feathers.examples.componentsExplorer.data.ButtonSettings;
+	import feathers.examples.componentsExplorer.data.EmbeddedAssets;
 	import feathers.examples.componentsExplorer.data.GroupedListSettings;
+	import feathers.examples.componentsExplorer.data.ItemRendererSettings;
 	import feathers.examples.componentsExplorer.data.ListSettings;
+	import feathers.examples.componentsExplorer.data.NumericStepperSettings;
 	import feathers.examples.componentsExplorer.data.SliderSettings;
 	import feathers.examples.componentsExplorer.data.TextInputSettings;
 	import feathers.examples.componentsExplorer.screens.ButtonGroupScreen;
 	import feathers.examples.componentsExplorer.screens.ButtonScreen;
-	import feathers.examples.componentsExplorer.screens.ButtonSettingsScreen;
 	import feathers.examples.componentsExplorer.screens.CalloutScreen;
 	import feathers.examples.componentsExplorer.screens.GroupedListScreen;
 	import feathers.examples.componentsExplorer.screens.GroupedListSettingsScreen;
+	import feathers.examples.componentsExplorer.screens.ItemRendererScreen;
+	import feathers.examples.componentsExplorer.screens.ItemRendererSettingsScreen;
 	import feathers.examples.componentsExplorer.screens.ListScreen;
 	import feathers.examples.componentsExplorer.screens.ListSettingsScreen;
 	import feathers.examples.componentsExplorer.screens.MainMenuScreen;
+	import feathers.examples.componentsExplorer.screens.NumericStepperScreen;
+	import feathers.examples.componentsExplorer.screens.NumericStepperSettingsScreen;
 	import feathers.examples.componentsExplorer.screens.PageIndicatorScreen;
 	import feathers.examples.componentsExplorer.screens.PickerListScreen;
 	import feathers.examples.componentsExplorer.screens.ProgressBarScreen;
@@ -32,7 +37,7 @@ package feathers.examples.componentsExplorer
 	import feathers.motion.transitions.ScreenSlidingStackTransitionManager;
 	import feathers.system.DeviceCapabilities;
 	import feathers.themes.MetalWorksMobileTheme;
-
+	
 	import starling.core.Starling;
 	import starling.display.Sprite;
 	import starling.events.Event;
@@ -47,8 +52,12 @@ package feathers.examples.componentsExplorer
 		private static const CALLOUT:String = "callout";
 		private static const GROUPED_LIST:String = "groupedList";
 		private static const GROUPED_LIST_SETTINGS:String = "groupedListSettings";
+		private static const ITEM_RENDERER:String = "itemRenderer";
+		private static const ITEM_RENDERER_SETTINGS:String = "itemRendererSettings";
 		private static const LIST:String = "list";
 		private static const LIST_SETTINGS:String = "listSettings";
+		private static const NUMERIC_STEPPER:String = "numericStepper";
+		private static const NUMERIC_STEPPER_SETTINGS:String = "numericStepperSettings";
 		private static const PAGE_INDICATOR:String = "pageIndicator";
 		private static const PICKER_LIST:String = "pickerList";
 		private static const PROGRESS_BAR:String = "progressBar";
@@ -66,7 +75,9 @@ package feathers.examples.componentsExplorer
 			showButtonGroup: BUTTON_GROUP,
 			showCallout: CALLOUT,
 			showGroupedList: GROUPED_LIST,
+			showItemRenderer: ITEM_RENDERER,
 			showList: LIST,
+			showNumericStepper: NUMERIC_STEPPER,
 			showPageIndicator: PAGE_INDICATOR,
 			showPickerList: PICKER_LIST,
 			showProgressBar: PROGRESS_BAR,
@@ -84,7 +95,6 @@ package feathers.examples.componentsExplorer
 			this.addEventListener(Event.REMOVED_FROM_STAGE, removedFromStageHandler);
 		}
 		
-		private var _theme:MetalWorksMobileTheme;
 		private var _container:ScrollContainer;
 		private var _navigator:ScreenNavigator;
 		private var _menu:MainMenuScreen;
@@ -98,26 +108,15 @@ package feathers.examples.componentsExplorer
 		
 		private function addedToStageHandler(event:Event):void
 		{
-			this._theme = new MetalWorksMobileTheme();
+			EmbeddedAssets.initialize();
+			new MetalWorksMobileTheme();
 			
 			this._navigator = new ScreenNavigator();
 
-			const buttonSettings:ButtonSettings = new ButtonSettings();
 			this._navigator.addScreen(BUTTON, new ScreenNavigatorItem(ButtonScreen,
 			{
 				complete: MAIN_MENU,
 				showSettings: BUTTON_SETTINGS
-			},
-			{
-				settings: buttonSettings
-			}));
-
-			this._navigator.addScreen(BUTTON_SETTINGS, new ScreenNavigatorItem(ButtonSettingsScreen,
-			{
-				complete: BUTTON
-			},
-			{
-				settings: buttonSettings
 			}));
 
 			this._navigator.addScreen(BUTTON_GROUP, new ScreenNavigatorItem(ButtonGroupScreen,
@@ -176,6 +175,24 @@ package feathers.examples.componentsExplorer
 				settings: groupedListSettings
 			}));
 
+			const itemRendererSettings:ItemRendererSettings = new ItemRendererSettings();
+			this._navigator.addScreen(ITEM_RENDERER, new ScreenNavigatorItem(ItemRendererScreen,
+			{
+				complete: MAIN_MENU,
+				showSettings: ITEM_RENDERER_SETTINGS
+			},
+			{
+				settings: itemRendererSettings
+			}));
+
+			this._navigator.addScreen(ITEM_RENDERER_SETTINGS, new ScreenNavigatorItem(ItemRendererSettingsScreen,
+			{
+				complete: ITEM_RENDERER
+			},
+			{
+				settings: itemRendererSettings
+			}));
+
 			const listSettings:ListSettings = new ListSettings();
 			this._navigator.addScreen(LIST, new ScreenNavigatorItem(ListScreen,
 			{
@@ -192,6 +209,24 @@ package feathers.examples.componentsExplorer
 			},
 			{
 				settings: listSettings
+			}));
+
+			const numericStepperSettings:NumericStepperSettings = new NumericStepperSettings();
+			this._navigator.addScreen(NUMERIC_STEPPER, new ScreenNavigatorItem(NumericStepperScreen,
+			{
+				complete: MAIN_MENU,
+				showSettings: NUMERIC_STEPPER_SETTINGS
+			},
+			{
+				settings: numericStepperSettings
+			}));
+
+			this._navigator.addScreen(NUMERIC_STEPPER_SETTINGS, new ScreenNavigatorItem(NumericStepperSettingsScreen,
+			{
+				complete: NUMERIC_STEPPER
+			},
+			{
+				settings: numericStepperSettings
 			}));
 
 			this._navigator.addScreen(PAGE_INDICATOR, new ScreenNavigatorItem(PageIndicatorScreen,

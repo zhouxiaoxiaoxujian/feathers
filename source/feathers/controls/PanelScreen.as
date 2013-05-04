@@ -20,8 +20,19 @@ package feathers.controls
 	 * A screen for use with <code>ScreenNavigator</code>, based on <code>Panel</code>
 	 * in order to provide a header and layout.
 	 *
+	 * <p><strong>Beta Component:</strong> This is a new component, and its APIs
+	 * may need some changes between now and the next version of Feathers to
+	 * account for overlooked requirements or other issues. Upgrading to future
+	 * versions of Feathers may involve manual changes to your code that uses
+	 * this component. The
+	 * <a href="http://wiki.starling-framework.org/feathers/deprecation-policy">Feathers deprecation policy</a>
+	 * will not go into effect until this component's status is upgraded from
+	 * beta to stable.</p>
+	 *
 	 * @see ScreenNavigator
 	 * @see Panel
+	 * @see Screen
+	 * @see http://wiki.starling-framework.org/feathers/panel-screen
 	 */
 	public class PanelScreen extends Panel implements IScreen
 	{
@@ -41,6 +52,7 @@ package feathers.controls
 			super();
 			this.headerName = DEFAULT_CHILD_NAME_HEADER;
 			this.originalDPI = DeviceCapabilities.dpi;
+			this.clipContent = false;
 		}
 
 		/**

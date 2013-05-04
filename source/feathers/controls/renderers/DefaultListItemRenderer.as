@@ -75,10 +75,20 @@ package feathers.controls.renderers
 			if(this._owner)
 			{
 				const list:List = List(this._owner);
-				this.isToggle = list.isSelectable;
+				this.isSelectableWithoutToggle = list.isSelectable;
+				this.isToggle = list.allowMultipleSelection;
 				this._owner.addEventListener(Event.SCROLL, owner_scrollHandler);
 			}
 			this.invalidate(INVALIDATION_FLAG_DATA);
+		}
+
+		/**
+		 * @private
+		 */
+		override public function dispose():void
+		{
+			this.owner = null;
+			super.dispose();
 		}
 
 		/**

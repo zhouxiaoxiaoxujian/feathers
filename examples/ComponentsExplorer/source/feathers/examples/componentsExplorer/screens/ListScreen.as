@@ -3,6 +3,8 @@ package feathers.examples.componentsExplorer.screens
 	import feathers.controls.Button;
 	import feathers.controls.List;
 	import feathers.controls.PanelScreen;
+	import feathers.controls.renderers.DefaultListItemRenderer;
+	import feathers.controls.renderers.IListItemRenderer;
 	import feathers.data.ListCollection;
 	import feathers.events.FeathersEventType;
 	import feathers.examples.componentsExplorer.data.ListSettings;
@@ -49,8 +51,16 @@ package feathers.examples.componentsExplorer.screens
 			this._list.dataProvider = new ListCollection(items);
 			this._list.typicalItem = {text: "Item 1000"};
 			this._list.isSelectable = this.settings.isSelectable;
+			this._list.allowMultipleSelection = this.settings.allowMultipleSelection;
 			this._list.hasElasticEdges = this.settings.hasElasticEdges;
-			this._list.itemRendererProperties.labelField = "text";
+			this._list.clipContent = false;
+			this._list.itemRendererFactory = function():IListItemRenderer
+			{
+				var renderer:DefaultListItemRenderer = new DefaultListItemRenderer();
+				renderer.labelField = "text";
+				renderer.isQuickHitAreaEnabled = true;
+				return renderer;
+			};
 			this._list.addEventListener(Event.CHANGE, list_changeHandler);
 			this._list.layoutData = new AnchorLayoutData(0, 0, 0, 0);
 			this.addChild(this._list);
@@ -60,6 +70,7 @@ package feathers.examples.componentsExplorer.screens
 			if(!DeviceCapabilities.isTablet(Starling.current.nativeStage))
 			{
 				this._backButton = new Button();
+				this._backButton.nameList.add(Button.ALTERNATE_NAME_BACK_BUTTON);
 				this._backButton.label = "Back";
 				this._backButton.addEventListener(Event.TRIGGERED, backButton_triggeredHandler);
 
@@ -67,6 +78,8 @@ package feathers.examples.componentsExplorer.screens
 				[
 					this._backButton
 				];
+
+				this.backButtonHandler = this.onBackButton;
 			}
 
 			this._settingsButton = new Button();
@@ -77,9 +90,6 @@ package feathers.examples.componentsExplorer.screens
 			[
 				this._settingsButton
 			];
-			
-			// handles the back hardware key on android
-			this.backButtonHandler = this.onBackButton;
 		}
 		
 		private function onBackButton():void
@@ -99,7 +109,8 @@ package feathers.examples.componentsExplorer.screens
 
 		private function list_changeHandler(event:Event):void
 		{
-			trace("List onChange:", this._list.selectedIndex);
+			const selectedIndices:Vector.<int> = this._list.selectedIndices;
+			trace("List onChange:", selectedIndices.length > 0 ? selectedIndices : this._list.selectedIndex);
 		}
 	}
 }

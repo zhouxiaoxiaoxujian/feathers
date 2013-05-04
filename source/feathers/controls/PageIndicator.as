@@ -454,12 +454,14 @@ package feathers.controls
 		protected var _normalSymbolFactory:Function = defaultNormalSymbolFactory;
 
 		/**
-		 * A function used to create a normal symbol.
+		 * A function used to create a normal symbol. May be any Starling
+		 * display object.
 		 *
 		 * <p>This function should have the following signature:</p>
 		 * <pre>function():DisplayObject</pre>
 		 *
 		 * @see starling.display.DisplayObject
+		 * @see #selectedSymbolFactory
 		 */
 		public function get normalSymbolFactory():Function
 		{
@@ -485,12 +487,14 @@ package feathers.controls
 		protected var _selectedSymbolFactory:Function = defaultSelectedSymbolFactory;
 
 		/**
-		 * A function used to create a selected symbol.
+		 * A function used to create a selected symbol. May be any Starling
+		 * display object.
 		 *
 		 * <p>This function should have the following signature:</p>
 		 * <pre>function():DisplayObject</pre>
 		 *
 		 * @see starling.display.DisplayObject
+		 * @see #normalSymbolFactory
 		 */
 		public function get selectedSymbolFactory():Function
 		{
@@ -686,10 +690,11 @@ package feathers.controls
 				if(touch.phase == TouchPhase.ENDED)
 				{
 					this.touchPointID = -1;
-					touch.getLocation(this, HELPER_POINT);
-					const isInBounds:Boolean = this.hitTest(HELPER_POINT, true) != null;
+					touch.getLocation(this.stage, HELPER_POINT);
+					const isInBounds:Boolean = this.contains(this.stage.hitTest(HELPER_POINT, true));
 					if(isInBounds)
 					{
+						this.globalToLocal(HELPER_POINT, HELPER_POINT);
 						if(this._direction == DIRECTION_VERTICAL)
 						{
 							if(HELPER_POINT.y < this.selectedSymbol.y)

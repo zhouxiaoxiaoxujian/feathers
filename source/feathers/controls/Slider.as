@@ -195,28 +195,47 @@ package feathers.controls
 		public function Slider()
 		{
 			super();
-			this.addEventListener(FeathersEventType.FOCUS_IN, slider_focusInHandler);
-			this.addEventListener(FeathersEventType.FOCUS_OUT, slider_focusOutHandler);
 			this.addEventListener(Event.REMOVED_FROM_STAGE, slider_removedFromStageHandler);
 		}
 
 		/**
-		 * The value added to the <code>nameList</code> of the minimum track.
+		 * The value added to the <code>nameList</code> of the minimum track. This
+		 * variable is <code>protected</code> so that sub-classes can customize
+		 * the minimum track name in their constructors instead of using the default
+		 * name defined by <code>DEFAULT_CHILD_NAME_MINIMUM_TRACK</code>.
 		 *
+		 * <p>To customize the minimum track name without subclassing, see
+		 * <code>customMinimumTrackName</code>.</p>
+		 *
+		 * @see #customMinimumTrackName
 		 * @see feathers.core.IFeathersControl#nameList
 		 */
 		protected var minimumTrackName:String = DEFAULT_CHILD_NAME_MINIMUM_TRACK;
 
 		/**
-		 * The value added to the <code>nameList</code> of the maximum track.
+		 * The value added to the <code>nameList</code> of the maximum track. This
+		 * variable is <code>protected</code> so that sub-classes can customize
+		 * the maximum track name in their constructors instead of using the default
+		 * name defined by <code>DEFAULT_CHILD_NAME_MAXIMUM_TRACK</code>.
 		 *
+		 * <p>To customize the maximum track name without subclassing, see
+		 * <code>customMaximumTrackName</code>.</p>
+		 *
+		 * @see #customMaximumTrackName
 		 * @see feathers.core.IFeathersControl#nameList
 		 */
 		protected var maximumTrackName:String = DEFAULT_CHILD_NAME_MAXIMUM_TRACK;
 
 		/**
-		 * The value added to the <code>nameList</code> of the thumb.
+		 * The value added to the <code>nameList</code> of the thumb. This
+		 * variable is <code>protected</code> so that sub-classes can customize
+		 * the thumb name in their constructors instead of using the default
+		 * name defined by <code>DEFAULT_CHILD_NAME_THUMB</code>.
 		 *
+		 * <p>To customize the thumb name without subclassing, see
+		 * <code>customThumbName</code>.</p>
+		 *
+		 * @see #customThumbName
 		 * @see feathers.core.IFeathersControl#nameList
 		 */
 		protected var thumbName:String = DEFAULT_CHILD_NAME_THUMB;
@@ -287,6 +306,9 @@ package feathers.controls
 			}
 			this._direction = value;
 			this.invalidate(INVALIDATION_FLAG_DATA);
+			this.invalidate(INVALIDATION_FLAG_MINIMUM_TRACK_FACTORY);
+			this.invalidate(INVALIDATION_FLAG_MAXIMUM_TRACK_FACTORY);
+			this.invalidate(INVALIDATION_FLAG_THUMB_FACTORY);
 		}
 		
 		/**
@@ -641,14 +663,16 @@ package feathers.controls
 
 		/**
 		 * A function used to generate the slider's minimum track sub-component.
-		 * This can be used to change properties on the minimum track when it is first
-		 * created. For instance, if you are skinning Feathers components
-		 * without a theme, you might use <code>minimumTrackFactory</code> to set
-		 * skins and other styles on the minimum track.
+		 * The minimum track must be an instance of <code>Button</code>. This
+		 * factory can be used to change properties on the minimum track when it
+		 * is first created. For instance, if you are skinning Feathers
+		 * components without a theme, you might use this factory to set skins
+		 * and other styles on the minimum track.
 		 *
 		 * <p>The function should have the following signature:</p>
 		 * <pre>function():Button</pre>
 		 *
+		 * @see feathers.controls.Button
 		 * @see #minimumTrackProperties
 		 */
 		public function get minimumTrackFactory():Function
@@ -708,7 +732,8 @@ package feathers.controls
 		/**
 		 * A set of key/value pairs to be passed down to the slider's minimum
 		 * track sub-component. The minimum track is a
-		 * <code>feathers.controls.Button</code> instance.
+		 * <code>feathers.controls.Button</code> instance that is created by
+		 * <code>minimumTrackFactory</code>.
 		 *
 		 * <p>If the subcomponent has its own subcomponents, their properties
 		 * can be set too, using attribute <code>&#64;</code> notation. For example,
@@ -716,14 +741,19 @@ package feathers.controls
 		 * which is in a <code>Scroller</code> which is in a <code>List</code>,
 		 * you can use the following syntax:</p>
 		 * <pre>list.scrollerProperties.&#64;verticalScrollBarProperties.&#64;thumbProperties.defaultSkin = new Image(texture);</pre>
-		 * 
+		 *
+		 * <p>Setting properties in a <code>minimumTrackFactory</code> function
+		 * instead of using <code>minimumTrackProperties</code> will result in
+		 * better performance.</p>
+		 *
+		 * @see #minimumTrackFactory
 		 * @see feathers.controls.Button
 		 */
 		public function get minimumTrackProperties():Object
 		{
 			if(!this._minimumTrackProperties)
 			{
-				this._minimumTrackProperties = new PropertyProxy(minimumTrackProperties_onChange);
+				this._minimumTrackProperties = new PropertyProxy(childProperties_onChange);
 			}
 			return this._minimumTrackProperties;
 		}
@@ -752,12 +782,12 @@ package feathers.controls
 			}
 			if(this._minimumTrackProperties)
 			{
-				this._minimumTrackProperties.removeOnChangeCallback(minimumTrackProperties_onChange);
+				this._minimumTrackProperties.removeOnChangeCallback(childProperties_onChange);
 			}
 			this._minimumTrackProperties = PropertyProxy(value);
 			if(this._minimumTrackProperties)
 			{
-				this._minimumTrackProperties.addOnChangeCallback(minimumTrackProperties_onChange);
+				this._minimumTrackProperties.addOnChangeCallback(childProperties_onChange);
 			}
 			this.invalidate(INVALIDATION_FLAG_STYLES);
 		}
@@ -769,14 +799,16 @@ package feathers.controls
 
 		/**
 		 * A function used to generate the slider's maximum track sub-component.
-		 * This can be used to change properties on the maximum track when it is first
-		 * created. For instance, if you are skinning Feathers components
-		 * without a theme, you might use <code>maximumTrackFactory</code> to set
-		 * skins and other styles on the maximum track.
+		 * The maximum track must be an instance of <code>Button</code>.
+		 * This factory can be used to change properties on the maximum track
+		 * when it is first created. For instance, if you are skinning Feathers
+		 * components without a theme, you might use this factory to set skins
+		 * and other styles on the maximum track.
 		 *
 		 * <p>The function should have the following signature:</p>
 		 * <pre>function():Button</pre>
 		 *
+		 * @see feathers.controls.Button
 		 * @see #maximumTrackProperties
 		 */
 		public function get maximumTrackFactory():Function
@@ -836,7 +868,8 @@ package feathers.controls
 		/**
 		 * A set of key/value pairs to be passed down to the slider's maximum
 		 * track sub-component. The maximum track is a
-		 * <code>feathers.controls.Button</code> instance.
+		 * <code>feathers.controls.Button</code> instance that is created by
+		 * <code>maximumTrackFactory</code>.
 		 *
 		 * <p>If the subcomponent has its own subcomponents, their properties
 		 * can be set too, using attribute <code>&#64;</code> notation. For example,
@@ -844,14 +877,19 @@ package feathers.controls
 		 * which is in a <code>Scroller</code> which is in a <code>List</code>,
 		 * you can use the following syntax:</p>
 		 * <pre>list.scrollerProperties.&#64;verticalScrollBarProperties.&#64;thumbProperties.defaultSkin = new Image(texture);</pre>
-		 * 
+		 *
+		 * <p>Setting properties in a <code>maximumTrackFactory</code> function
+		 * instead of using <code>maximumTrackProperties</code> will result in
+		 * better performance.</p>
+		 *
+		 * @see #maximumTrackFactory
 		 * @see feathers.controls.Button
 		 */
 		public function get maximumTrackProperties():Object
 		{
 			if(!this._maximumTrackProperties)
 			{
-				this._maximumTrackProperties = new PropertyProxy(maximumTrackProperties_onChange);
+				this._maximumTrackProperties = new PropertyProxy(childProperties_onChange);
 			}
 			return this._maximumTrackProperties;
 		}
@@ -880,12 +918,12 @@ package feathers.controls
 			}
 			if(this._maximumTrackProperties)
 			{
-				this._maximumTrackProperties.removeOnChangeCallback(maximumTrackProperties_onChange);
+				this._maximumTrackProperties.removeOnChangeCallback(childProperties_onChange);
 			}
 			this._maximumTrackProperties = PropertyProxy(value);
 			if(this._maximumTrackProperties)
 			{
-				this._maximumTrackProperties.addOnChangeCallback(maximumTrackProperties_onChange);
+				this._maximumTrackProperties.addOnChangeCallback(childProperties_onChange);
 			}
 			this.invalidate(INVALIDATION_FLAG_STYLES);
 		}
@@ -897,14 +935,16 @@ package feathers.controls
 
 		/**
 		 * A function used to generate the slider's thumb sub-component.
-		 * This can be used to change properties on the thumb when it is first
+		 * The thumb must be an instance of <code>Button</code>. This factory
+		 * can be used to change properties on the thumb when it is first
 		 * created. For instance, if you are skinning Feathers components
-		 * without a theme, you might use <code>thumbFactory</code> to set
-		 * skins and text styles on the thumb.
+		 * without a theme, you might use this factory to set skins and other
+		 * styles on the thumb.
 		 *
 		 * <p>The function should have the following signature:</p>
 		 * <pre>function():Button</pre>
 		 *
+		 * @see feathers.controls.Button
 		 * @see #thumbProperties
 		 */
 		public function get thumbFactory():Function
@@ -964,7 +1004,7 @@ package feathers.controls
 		/**
 		 * A set of key/value pairs to be passed down to the slider's thumb
 		 * sub-component. The thumb is a <code>feathers.controls.Button</code>
-		 * instance.
+		 * instance that is created by <code>thumbFactory</code>.
 		 *
 		 * <p>If the subcomponent has its own subcomponents, their properties
 		 * can be set too, using attribute <code>&#64;</code> notation. For example,
@@ -972,14 +1012,19 @@ package feathers.controls
 		 * which is in a <code>Scroller</code> which is in a <code>List</code>,
 		 * you can use the following syntax:</p>
 		 * <pre>list.scrollerProperties.&#64;verticalScrollBarProperties.&#64;thumbProperties.defaultSkin = new Image(texture);</pre>
+		 *
+		 * <p>Setting properties in a <code>thumbFactory</code> function instead
+		 * of using <code>thumbProperties</code> will result in better
+		 * performance.</p>
 		 * 
 		 * @see feathers.controls.Button
+		 * @see #thumbFactory
 		 */
 		public function get thumbProperties():Object
 		{
 			if(!this._thumbProperties)
 			{
-				this._thumbProperties = new PropertyProxy(thumbProperties_onChange);
+				this._thumbProperties = new PropertyProxy(childProperties_onChange);
 			}
 			return this._thumbProperties;
 		}
@@ -1008,12 +1053,12 @@ package feathers.controls
 			}
 			if(this._thumbProperties)
 			{
-				this._thumbProperties.removeOnChangeCallback(thumbProperties_onChange);
+				this._thumbProperties.removeOnChangeCallback(childProperties_onChange);
 			}
 			this._thumbProperties = PropertyProxy(value);
 			if(this._thumbProperties)
 			{
-				this._thumbProperties.addOnChangeCallback(thumbProperties_onChange);
+				this._thumbProperties.addOnChangeCallback(childProperties_onChange);
 			}
 			this.invalidate(INVALIDATION_FLAG_STYLES);
 		}
@@ -1057,6 +1102,7 @@ package feathers.controls
 			const stylesInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_STYLES);
 			var sizeInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_SIZE);
 			const stateInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_STATE);
+			const focusInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_FOCUS);
 			const thumbFactoryInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_THUMB_FACTORY);
 			const minimumTrackFactoryInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_MINIMUM_TRACK_FACTORY);
 			const maximumTrackFactoryInvalid:Boolean = this.isInvalid(INVALIDATION_FLAG_MAXIMUM_TRACK_FACTORY);
@@ -1077,22 +1123,23 @@ package feathers.controls
 			{
 				this.refreshThumbStyles();
 			}
-
-			if(minimumTrackFactoryInvalid || maximumTrackFactoryInvalid || stylesInvalid)
+			if(minimumTrackFactoryInvalid || stylesInvalid)
 			{
-				this.refreshTrackStyles();
+				this.refreshMinimumTrackStyles();
+			}
+			if((maximumTrackFactoryInvalid || stylesInvalid) && this.maximumTrack)
+			{
+				this.refreshMaximumTrackStyles();
 			}
 			
 			if(thumbFactoryInvalid || stateInvalid)
 			{
 				this.thumb.isEnabled = this._isEnabled;
 			}
-
 			if(minimumTrackFactoryInvalid || stateInvalid)
 			{
 				this.minimumTrack.isEnabled = this._isEnabled;
 			}
-
 			if((maximumTrackFactoryInvalid || stateInvalid) && this.maximumTrack)
 			{
 				this.maximumTrack.isEnabled = this._isEnabled;
@@ -1104,6 +1151,11 @@ package feathers.controls
 				dataInvalid || stylesInvalid || sizeInvalid)
 			{
 				this.layoutChildren();
+			}
+
+			if(sizeInvalid || focusInvalid)
+			{
+				this.refreshFocusIndicator();
 			}
 		}
 
@@ -1282,7 +1334,7 @@ package feathers.controls
 		/**
 		 * @private
 		 */
-		protected function refreshTrackStyles():void
+		protected function refreshMinimumTrackStyles():void
 		{
 			for(var propertyName:String in this._minimumTrackProperties)
 			{
@@ -1292,15 +1344,23 @@ package feathers.controls
 					this.minimumTrack[propertyName] = propertyValue;
 				}
 			}
-			if(this.maximumTrack)
+		}
+
+		/**
+		 * @private
+		 */
+		protected function refreshMaximumTrackStyles():void
+		{
+			if(!this.maximumTrack)
 			{
-				for(propertyName in this._maximumTrackProperties)
+				return;
+			}
+			for(var propertyName:String in this._maximumTrackProperties)
+			{
+				if(this.maximumTrack.hasOwnProperty(propertyName))
 				{
-					if(this.maximumTrack.hasOwnProperty(propertyName))
-					{
-						propertyValue = this._maximumTrackProperties[propertyName];
-						this.maximumTrack[propertyName] = propertyValue;
-					}
+					var propertyValue:Object = this._maximumTrackProperties[propertyName];
+					this.maximumTrack[propertyName] = propertyValue;
 				}
 			}
 		}
@@ -1440,15 +1500,15 @@ package feathers.controls
 			var percentage:Number;
 			if(this._direction == DIRECTION_VERTICAL)
 			{
-				const trackScrollableHeight:Number = this.actualHeight - this.thumb.height;
-				const yOffset:Number = location.y - this._touchStartY;
+				const trackScrollableHeight:Number = this.actualHeight - this.thumb.height - this._minimumPadding - this._maximumPadding;
+				const yOffset:Number = location.y - this._touchStartY - this._maximumPadding;
 				const yPosition:Number = Math.min(Math.max(0, this._thumbStartY + yOffset), trackScrollableHeight);
 				percentage = 1 - (yPosition / trackScrollableHeight);
 			}
 			else //horizontal
 			{
-				const trackScrollableWidth:Number = this.actualWidth - this.thumb.width;
-				const xOffset:Number = location.x - this._touchStartX;
+				const trackScrollableWidth:Number = this.actualWidth - this.thumb.width - this._minimumPadding - this._maximumPadding;
+				const xOffset:Number = location.x - this._touchStartX - this._minimumPadding;
 				const xPosition:Number = Math.min(Math.max(0, this._thumbStartX + xOffset), trackScrollableWidth);
 				percentage = xPosition / trackScrollableWidth;
 			}
@@ -1486,44 +1546,18 @@ package feathers.controls
 			const page:Number = isNaN(this._page) ? this._step : this._page;
 			if(this._touchValue < this._value)
 			{
-				var newValue:Number = Math.max(this._touchValue, this._value - page);
-				if(page != 0)
-				{
-					newValue = roundToNearest(newValue, this._step);
-				}
-				this.value = newValue;
+				this.value = Math.max(this._touchValue, this._value - page);
 			}
 			else if(this._touchValue > this._value)
 			{
-				newValue = Math.min(this._touchValue, this._value + page);
-				if(page != 0)
-				{
-					newValue = roundToNearest(newValue, page);
-				}
-				this.value = newValue;
+				this.value = Math.min(this._touchValue, this._value + page);
 			}
 		}
 
 		/**
 		 * @private
 		 */
-		protected function minimumTrackProperties_onChange(proxy:PropertyProxy, name:Object):void
-		{
-			this.invalidate(INVALIDATION_FLAG_STYLES);
-		}
-
-		/**
-		 * @private
-		 */
-		protected function maximumTrackProperties_onChange(proxy:PropertyProxy, name:Object):void
-		{
-			this.invalidate(INVALIDATION_FLAG_STYLES);
-		}
-
-		/**
-		 * @private
-		 */
-		protected function thumbProperties_onChange(proxy:PropertyProxy, name:Object):void
+		protected function childProperties_onChange(proxy:PropertyProxy, name:Object):void
 		{
 			this.invalidate(INVALIDATION_FLAG_STYLES);
 		}
@@ -1545,16 +1579,18 @@ package feathers.controls
 		/**
 		 * @private
 		 */
-		protected function slider_focusInHandler(event:Event):void
+		override protected function focusInHandler(event:Event):void
 		{
+			super.focusInHandler(event);
 			this.stage.addEventListener(KeyboardEvent.KEY_DOWN, stage_keyDownHandler);
 		}
 
 		/**
 		 * @private
 		 */
-		protected function slider_focusOutHandler(event:Event):void
+		override protected function focusOutHandler(event:Event):void
 		{
+			super.focusOutHandler(event);
 			this.stage.removeEventListener(KeyboardEvent.KEY_DOWN, stage_keyDownHandler);
 		}
 		

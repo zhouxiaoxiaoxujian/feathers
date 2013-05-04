@@ -13,11 +13,11 @@ package feathers.core
 	import feathers.layout.ILayoutData;
 	import feathers.layout.ILayoutDisplayObject;
 
+	import flash.errors.IllegalOperationError;
 	import flash.geom.Matrix;
 	import flash.geom.Point;
 	import flash.geom.Rectangle;
 
-	import starling.core.RenderSupport;
 	import starling.display.DisplayObject;
 	import starling.display.Sprite;
 	import starling.events.Event;
@@ -118,6 +118,12 @@ package feathers.core
 		public static const INVALIDATION_FLAG_SELECTED:String = "selected";
 
 		/**
+		 * Invalidation flag to indicate that the focus of the UI control has
+		 * changed.
+		 */
+		public static const INVALIDATION_FLAG_FOCUS:String = "focus";
+
+		/**
 		 * @private
 		 */
 		protected static const INVALIDATION_FLAG_TEXT_RENDERER:String = "textRenderer";
@@ -126,6 +132,16 @@ package feathers.core
 		 * @private
 		 */
 		protected static const INVALIDATION_FLAG_TEXT_EDITOR:String = "textEditor";
+
+		/**
+		 * @private
+		 */
+		protected static const ILLEGAL_WIDTH_ERROR:String = "A component's width cannot be NaN.";
+
+		/**
+		 * @private
+		 */
+		protected static const ILLEGAL_HEIGHT_ERROR:String = "A component's height cannot be NaN.";
 
 		/**
 		 * A function used by all UI controls that support text renderers to
@@ -168,6 +184,7 @@ package feathers.core
 		{
 			super();
 			this.addEventListener(Event.ADDED_TO_STAGE, initialize_addedToStageHandler);
+			this.addEventListener(Event.FLATTEN, feathersControl_flattenHandler);
 		}
 
 		/**
@@ -340,12 +357,25 @@ package feathers.core
 		 */
 		override public function set width(value:Number):void
 		{
-			if(this.explicitWidth == value || (isNaN(value) && isNaN(this.explicitWidth)))
+			if(this.explicitWidth == value)
+			{
+				return;
+			}
+			const valueIsNaN:Boolean = isNaN(value);
+			if(valueIsNaN && isNaN(this.explicitWidth))
 			{
 				return;
 			}
 			this.explicitWidth = value;
-			this.setSizeInternal(value, this.actualHeight, true);
+			if(valueIsNaN)
+			{
+				this.actualWidth = 0;
+				this.invalidate(INVALIDATION_FLAG_SIZE);
+			}
+			else
+			{
+				this.setSizeInternal(value, this.actualHeight, true);
+			}
 		}
 
 		/**
@@ -391,12 +421,25 @@ package feathers.core
 		 */
 		override public function set height(value:Number):void
 		{
-			if(this.explicitHeight == value || (isNaN(value) && isNaN(this.explicitHeight)))
+			if(this.explicitHeight == value)
+			{
+				return;
+			}
+			const valueIsNaN:Boolean = isNaN(value);
+			if(valueIsNaN && isNaN(this.explicitHeight))
 			{
 				return;
 			}
 			this.explicitHeight = value;
-			this.setSizeInternal(this.actualWidth, value, true);
+			if(valueIsNaN)
+			{
+				this.actualHeight = 0;
+				this.invalidate(INVALIDATION_FLAG_SIZE);
+			}
+			else
+			{
+				this.setSizeInternal(this.actualWidth, value, true);
+			}
 		}
 
 		/**
@@ -667,11 +710,25 @@ package feathers.core
 		 */
 		public function set focusManager(value:IFocusManager):void
 		{
+			if(!(this is IFocusDisplayObject))
+			{
+				throw new IllegalOperationError("Cannot pass a focus manager to a component that does not implement feathers.core.IFocusDisplayObject");
+			}
 			if(this._focusManager == value)
 			{
 				return;
 			}
 			this._focusManager = value;
+			if(this._focusManager)
+			{
+				this.addEventListener(FeathersEventType.FOCUS_IN, focusInHandler);
+				this.addEventListener(FeathersEventType.FOCUS_OUT, focusOutHandler);
+			}
+			else
+			{
+				this.removeEventListener(FeathersEventType.FOCUS_IN, focusInHandler);
+				this.removeEventListener(FeathersEventType.FOCUS_OUT, focusOutHandler);
+			}
 		}
 
 		/**
@@ -692,6 +749,10 @@ package feathers.core
 		 */
 		public function set isFocusEnabled(value:Boolean):void
 		{
+			if(!(this is IFocusDisplayObject))
+			{
+				throw new IllegalOperationError("Cannot enable focus on a component that does not implement feathers.core.IFocusDisplayObject");
+			}
 			if(this._isFocusEnabled == value)
 			{
 				return;
@@ -717,12 +778,262 @@ package feathers.core
 		 */
 		public function set nextTabFocus(value:IFocusDisplayObject):void
 		{
-			if(this._nextTabFocus == value)
+			if(!(this is IFocusDisplayObject))
 			{
-				return;
+				throw new IllegalOperationError("Cannot set next tab focus on a component that does not implement feathers.core.IFocusDisplayObject");
 			}
 			this._nextTabFocus = value;
 		}
+
+		/**
+		 * @private
+		 */
+		protected var _previousTabFocus:IFocusDisplayObject;
+
+		/**
+		 * @copy feathers.core.IFocusDisplayObject#previousTabFocus
+		 */
+		public function get previousTabFocus():IFocusDisplayObject
+		{
+			return this._previousTabFocus;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set previousTabFocus(value:IFocusDisplayObject):void
+		{
+			if(!(this is IFocusDisplayObject))
+			{
+				throw new IllegalOperationError("Cannot set previous tab focus on a component that does not implement feathers.core.IFocusDisplayObject");
+			}
+			this._previousTabFocus = value;
+		}
+
+		/**
+		 * @private
+		 */
+		protected var _focusIndicatorSkin:DisplayObject;
+
+		/**
+		 * If this component supports focus, this optional skin will be
+		 * displayed above the component when <code>showFocus()</code> is
+		 * called. The focus indicator skin is not always displayed when the
+		 * component has focus. Typically, if the component receives focus from
+		 * a touch, the focus indicator is not displayed.
+		 *
+		 * <p>The <code>touchable</code> of this skin will always be set to
+		 * <code>false</code> so that it does not "steal" touches from the
+		 * component or its sub-components. This skin will not affect the
+		 * dimensions of the component or its hit area. It is simply a visual
+		 * indicator of focus.</p>
+		 */
+		public function get focusIndicatorSkin():DisplayObject
+		{
+			return this._focusIndicatorSkin;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set focusIndicatorSkin(value:DisplayObject):void
+		{
+			if(!(this is IFocusDisplayObject))
+			{
+				throw new IllegalOperationError("Cannot set focus indicator skin on a component that does not implement feathers.core.IFocusDisplayObject");
+			}
+			if(this._focusIndicatorSkin == value)
+			{
+				return;
+			}
+			if(this._focusIndicatorSkin && this._focusIndicatorSkin.parent)
+			{
+				this._focusIndicatorSkin.removeFromParent(false);
+			}
+			this._focusIndicatorSkin = value;
+			if(this._focusIndicatorSkin)
+			{
+				this._focusIndicatorSkin.touchable = false;
+			}
+			if(this._focusManager && this._focusManager.focus == this)
+			{
+				this.invalidate(INVALIDATION_FLAG_STYLES);
+			}
+		}
+
+		/**
+		 * Quickly sets all focus padding properties to the same value. The
+		 * <code>focusPadding</code> getter always returns the value of
+		 * <code>focusPaddingTop</code>, but the other focus padding values may
+		 * be different.
+		 *
+		 * <p>The following example gives the button 2 pixels of focus padding
+		 * on all sides:</p>
+		 *
+		 * <listing version="3.0">
+		 * object.padding = 2;</listing>
+		 */
+		public function get focusPadding():Number
+		{
+			return this._focusPaddingTop;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set focusPadding(value:Number):void
+		{
+			this.focusPaddingTop = value;
+			this.focusPaddingRight = value;
+			this.focusPaddingBottom = value;
+			this.focusPaddingLeft = value;
+		}
+
+		/**
+		 * @private
+		 */
+		protected var _focusPaddingTop:Number = 0;
+
+		/**
+		 * The minimum space, in pixels, between the object's top edge and the
+		 * top edge of the focus indicator skin. A negative value may be used
+		 * to expand the focus indicator skin outside the bounds of the object.
+		 *
+		 * <p>The following example gives the focus indicator skin -2 pixels of
+		 * padding on the top edge only:</p>
+		 *
+		 * <listing version="3.0">
+		 * button.focusPaddingTop = -2;</listing>
+		 */
+		public function get focusPaddingTop():Number
+		{
+			return this._focusPaddingTop;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set focusPaddingTop(value:Number):void
+		{
+			if(this._focusPaddingTop == value)
+			{
+				return;
+			}
+			this._focusPaddingTop = value;
+			this.invalidate(INVALIDATION_FLAG_FOCUS);
+		}
+
+		/**
+		 * @private
+		 */
+		protected var _focusPaddingRight:Number = 0;
+
+		/**
+		 * The minimum space, in pixels, between the object's right edge and the
+		 * right edge of the focus indicator skin. A negative value may be used
+		 * to expand the focus indicator skin outside the bounds of the object.
+		 *
+		 * <p>The following example gives the focus indicator skin -2 pixels of
+		 * padding on the right edge only:</p>
+		 *
+		 * <listing version="3.0">
+		 * button.focusPaddingRight = -2;</listing>
+		 */
+		public function get focusPaddingRight():Number
+		{
+			return this._focusPaddingRight;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set focusPaddingRight(value:Number):void
+		{
+			if(this._focusPaddingRight == value)
+			{
+				return;
+			}
+			this._focusPaddingRight = value;
+			this.invalidate(INVALIDATION_FLAG_FOCUS);
+		}
+
+		/**
+		 * @private
+		 */
+		protected var _focusPaddingBottom:Number = 0;
+
+		/**
+		 * The minimum space, in pixels, between the object's bottom edge and the
+		 * bottom edge of the focus indicator skin. A negative value may be used
+		 * to expand the focus indicator skin outside the bounds of the object.
+		 *
+		 * <p>The following example gives the focus indicator skin -2 pixels of
+		 * padding on the bottom edge only:</p>
+		 *
+		 * <listing version="3.0">
+		 * button.focusPaddingBottom = -2;</listing>
+		 */
+		public function get focusPaddingBottom():Number
+		{
+			return this._focusPaddingBottom;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set focusPaddingBottom(value:Number):void
+		{
+			if(this._focusPaddingBottom == value)
+			{
+				return;
+			}
+			this._focusPaddingBottom = value;
+			this.invalidate(INVALIDATION_FLAG_FOCUS);
+		}
+
+		/**
+		 * @private
+		 */
+		protected var _focusPaddingLeft:Number = 0;
+
+		/**
+		 * The minimum space, in pixels, between the object's left edge and the
+		 * left edge of the focus indicator skin. A negative value may be used
+		 * to expand the focus indicator skin outside the bounds of the object.
+		 *
+		 * <p>The following example gives the focus indicator skin -2 pixels of
+		 * padding on the right edge only:</p>
+		 *
+		 * <listing version="3.0">
+		 * button.focusPaddingLeft = -2;</listing>
+		 */
+		public function get focusPaddingLeft():Number
+		{
+			return this._focusPaddingLeft;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set focusPaddingLeft(value:Number):void
+		{
+			if(this._focusPaddingLeft == value)
+			{
+				return;
+			}
+			this._focusPaddingLeft = value;
+			this.invalidate(INVALIDATION_FLAG_FOCUS);
+		}
+
+		/**
+		 * @private
+		 */
+		protected var _hasFocus:Boolean = false;
+
+		/**
+		 * @private
+		 */
+		protected var _showFocus:Boolean = false;
 
 		/**
 		 * @private
@@ -967,8 +1278,54 @@ package feathers.core
 		public function setSize(width:Number, height:Number):void
 		{
 			this.explicitWidth = width;
+			var widthIsNaN:Boolean = isNaN(width);
+			if(widthIsNaN)
+			{
+				this.actualWidth = 0;
+			}
 			this.explicitHeight = height;
-			this.setSizeInternal(width, height, true);
+			var heightIsNaN:Boolean = isNaN(height);
+			if(heightIsNaN)
+			{
+				this.actualHeight = 0;
+			}
+
+			if(widthIsNaN || heightIsNaN)
+			{
+				this.invalidate(INVALIDATION_FLAG_SIZE);
+			}
+			else
+			{
+				this.setSizeInternal(width, height, true);
+			}
+		}
+
+		/**
+		 * @copy feathers.core.IFocusDisplayObject#showFocus()
+		 */
+		public function showFocus():void
+		{
+			if(!this._hasFocus || !this._focusIndicatorSkin)
+			{
+				return;
+			}
+
+			this._showFocus = true;
+			this.invalidate(INVALIDATION_FLAG_FOCUS);
+		}
+
+		/**
+		 * @copy feathers.core.IFocusDisplayObject#hideFocus()
+		 */
+		public function hideFocus():void
+		{
+			if(!this._hasFocus || !this._focusIndicatorSkin)
+			{
+				return;
+			}
+
+			this._showFocus = false;
+			this.invalidate(INVALIDATION_FLAG_FOCUS);
 		}
 
 		/**
@@ -979,9 +1336,6 @@ package feathers.core
 		 */
 		protected function setSizeInternal(width:Number, height:Number, canInvalidate:Boolean):Boolean
 		{
-			const oldWidth:Number = this.actualWidth;
-			const oldHeight:Number = this.actualHeight;
-			var resized:Boolean = false;
 			if(!isNaN(this.explicitWidth))
 			{
 				width = this.explicitWidth;
@@ -998,6 +1352,15 @@ package feathers.core
 			{
 				height = Math.min(this._maxHeight, Math.max(this._minHeight, height));
 			}
+			if(isNaN(width))
+			{
+				throw new ArgumentError(ILLEGAL_WIDTH_ERROR);
+			}
+			if(isNaN(height))
+			{
+				throw new ArgumentError(ILLEGAL_HEIGHT_ERROR);
+			}
+			var resized:Boolean = false;
 			if(this.actualWidth != width)
 			{
 				this.actualWidth = width;
@@ -1053,6 +1416,74 @@ package feathers.core
 		protected function draw():void
 		{
 
+		}
+
+		/**
+		 * Updates the focus indicator skin by showing or hiding it and
+		 * adjusting its position and dimensions. This function is not called
+		 * automatically. Components that support focus should call this
+		 * function at an appropriate point within the <code>draw()</code>
+		 * function. This function may be overridden if the default behavior is
+		 * not desired.
+		 */
+		protected function refreshFocusIndicator():void
+		{
+			if(this._focusIndicatorSkin)
+			{
+				if(this._hasFocus && this._showFocus)
+				{
+					if(this._focusIndicatorSkin.parent != this)
+					{
+						this.addChild(this._focusIndicatorSkin);
+					}
+					else
+					{
+						this.setChildIndex(this._focusIndicatorSkin, this.numChildren - 1);
+					}
+				}
+				else if(this._focusIndicatorSkin.parent)
+				{
+					this._focusIndicatorSkin.removeFromParent(false);
+				}
+				this._focusIndicatorSkin.x = this._focusPaddingLeft;
+				this._focusIndicatorSkin.y = this._focusPaddingTop;
+				this._focusIndicatorSkin.width = this.actualWidth - this._focusPaddingLeft - this._focusPaddingRight;
+				this._focusIndicatorSkin.height = this.actualHeight - this._focusPaddingTop - this._focusPaddingBottom;
+			}
+		}
+
+		/**
+		 * Default event handler for <code>FeathersEventType.FOCUS_IN</code>
+		 * that may be overridden in subclasses to perform additional actions
+		 * when the component receives focus.
+		 */
+		protected function focusInHandler(event:Event):void
+		{
+			this._hasFocus = true;
+			this.invalidate(INVALIDATION_FLAG_FOCUS);
+		}
+
+		/**
+		 * Default event handler for <code>FeathersEventType.FOCUS_OUT</code>
+		 * that may be overridden in subclasses to perform additional actions
+		 * when the component loses focus.
+		 */
+		protected function focusOutHandler(event:Event):void
+		{
+			this._hasFocus = false;
+			this.invalidate(INVALIDATION_FLAG_FOCUS);
+		}
+
+		/**
+		 * @private
+		 */
+		protected function feathersControl_flattenHandler(event:Event):void
+		{
+			if(!this.stage || !this._isInitialized)
+			{
+				throw new IllegalOperationError("Cannot flatten this component until it is initialized and has access to the stage.");
+			}
+			this.validate();
 		}
 
 		/**

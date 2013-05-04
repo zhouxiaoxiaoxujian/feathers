@@ -28,6 +28,7 @@ package feathers.examples.componentsExplorer.screens
 		private var _backButton:Button;
 
 		private var _isSelectableToggle:ToggleSwitch;
+		private var _allowMultipleSelectionToggle:ToggleSwitch;
 		private var _hasElasticEdgesToggle:ToggleSwitch;
 
 		protected function initializeHandler(event:Event):void
@@ -38,6 +39,10 @@ package feathers.examples.componentsExplorer.screens
 			this._isSelectableToggle.isSelected = this.settings.isSelectable;
 			this._isSelectableToggle.addEventListener(Event.CHANGE, isSelectableToggle_changeHandler);
 
+			this._allowMultipleSelectionToggle = new ToggleSwitch();
+			this._allowMultipleSelectionToggle.isSelected = this.settings.allowMultipleSelection;
+			this._allowMultipleSelectionToggle.addEventListener(Event.CHANGE, allowMultipleSelectionToggle_changeHandler);
+
 			this._hasElasticEdgesToggle = new ToggleSwitch();
 			this._hasElasticEdgesToggle.isSelected = this.settings.hasElasticEdges;
 			this._hasElasticEdgesToggle.addEventListener(Event.CHANGE, hasElasticEdgesToggle_changeHandler);
@@ -47,12 +52,14 @@ package feathers.examples.componentsExplorer.screens
 			this._list.dataProvider = new ListCollection(
 			[
 				{ label: "isSelectable", accessory: this._isSelectableToggle },
+				{ label: "allowMultipleSelection", accessory: this._allowMultipleSelectionToggle },
 				{ label: "hasElasticEdges", accessory: this._hasElasticEdgesToggle },
 			]);
 			this._list.layoutData = new AnchorLayoutData(0, 0, 0, 0);
 			this.addChild(this._list);
 
 			this._backButton = new Button();
+			this._backButton.nameList.add(Button.ALTERNATE_NAME_BACK_BUTTON);
 			this._backButton.label = "Back";
 			this._backButton.addEventListener(Event.TRIGGERED, backButton_triggeredHandler);
 
@@ -78,6 +85,11 @@ package feathers.examples.componentsExplorer.screens
 		private function isSelectableToggle_changeHandler(event:Event):void
 		{
 			this.settings.isSelectable = this._isSelectableToggle.isSelected;
+		}
+
+		private function allowMultipleSelectionToggle_changeHandler(event:Event):void
+		{
+			this.settings.allowMultipleSelection = this._allowMultipleSelectionToggle.isSelected;
 		}
 
 		private function hasElasticEdgesToggle_changeHandler(event:Event):void

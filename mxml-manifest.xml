@@ -8,7 +8,10 @@
 	<component id="ImageLoader" class="feathers.controls.ImageLoader"/>
 	<component id="Label" class="feathers.controls.Label"/>
 	<component id="List" class="feathers.controls.List"/>
+	<component id="NumericStepper" class="feathers.controls.NumericStepper"/>
 	<component id="PageIndicator" class="feathers.controls.PageIndicator"/>
+	<component id="Panel" class="feathers.controls.Panel"/>
+	<component id="PanelScreen" class="feathers.controls.PanelScreen"/>
 	<component id="PickerList" class="feathers.controls.PickerList"/>
 	<component id="ProgressBar" class="feathers.controls.ProgressBar"/>
 	<component id="Radio" class="feathers.controls.Radio"/>
@@ -20,6 +23,7 @@
 	<component id="SimpleScrollBar" class="feathers.controls.SimpleScrollBar"/>
 	<component id="Slider" class="feathers.controls.Slider"/>
 	<component id="TabBar" class="feathers.controls.TabBar"/>
+	<component id="TextArea" class="feathers.controls.TextArea"/>
 	<component id="TextInput" class="feathers.controls.TextInput"/>
 	<component id="ToggleSwitch" class="feathers.controls.ToggleSwitch"/>
 
@@ -35,6 +39,7 @@
 	<component id="TextFieldTextRenderer" class="feathers.controls.text.TextFieldTextRenderer"/>
 	<component id="TextFieldTextEditor" class="feathers.controls.text.TextFieldTextEditor"/>
 	<component id="StageTextTextEditor" class="feathers.controls.text.StageTextTextEditor"/>
+	<component id="TextFieldTextEditorViewPort" class="feathers.controls.text.TextFieldTextEditorViewPort"/>
 
 	<component id="FeathersControl" class="feathers.core.FeathersControl"/>
 	<component id="ToggleGroup" class="feathers.core.ToggleGroup"/>
@@ -46,4 +51,6 @@
 	<component id="VerticalLayout" class="feathers.layout.VerticalLayout"/>
 	<component id="TiledRowsLayout" class="feathers.layout.TiledRowsLayout"/>
 	<component id="TiledColumnsLayout" class="feathers.layout.TiledColumnsLayout"/>
+	<component id="AnchorLayout" class="feathers.layout.AnchorLayout"/>
+	<component id="AnchorLayoutData" class="feathers.layout.AnchorLayoutData"/>
 </componentPackage>
